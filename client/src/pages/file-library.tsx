@@ -151,9 +151,9 @@ export default function FileLibrary() {
       if (sortBy === "name") {
         comparison = a.fileName.localeCompare(b.fileName);
       } else if (sortBy === "date") {
-        comparison = (a.id || 0) - (b.id || 0);
+        comparison = Number(a.id) - Number(b.id);
       } else if (sortBy === "size") {
-        comparison = (a.fileSize || 0) - (b.fileSize || 0);
+        comparison = Number(a.fileSize) - Number(b.fileSize);
       }
       return sortOrder === "asc" ? comparison : -comparison;
     });
