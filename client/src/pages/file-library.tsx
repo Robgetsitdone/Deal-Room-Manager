@@ -52,21 +52,27 @@ export default function FileLibrary() {
 
   const { uploadFile, isUploading, progress } = useUpload({
     onSuccess: async (response) => {
-      const fileName =
-        fileInputRef.current?.files?.[0]?.name || "Uploaded file";
-      const fileType =
-        fileInputRef.current?.files?.[0]?.type || "application/octet-stream";
-      const fileSize = fileInputRef.current?.files?.[0]?.size || 0;
+      const fileName = response.metadata.name || "Uploaded file";
+      const fileType = response.metadata.contentType || "application/octet-stream";
+      const fileSize = response.metadata.size || 0;
 
-      await apiRequest("POST", "/api/files", {
-        fileName,
-        fileUrl: response.objectPath,
-        fileType: fileType.split("/").pop() || "unknown",
-        fileSize,
-      });
+      try {
+        await apiRequest("POST", "/api/files", {
+          fileName,
+          fileUrl: response.objectPath,
+          fileType: fileType.split("/").pop() || "unknown",
+          fileSize,
+        });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/files"] });
-      toast({ title: "File uploaded successfully" });
+        queryClient.invalidateQueries({ queryKey: ["/api/files"] });
+        toast({ title: "File uploaded successfully" });
+      } catch (regErr: any) {
+        toast({
+          title: "File uploaded but failed to register",
+          description: regErr.message,
+          variant: "destructive",
+        });
+      }
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
     onError: (err) => {
@@ -101,7 +107,7 @@ export default function FileLibrary() {
     }
   };
 
-  const fileTypes = ["all", ...new Set((files || []).map((f) => f.fileType))];
+  const fileTypes = ["all", ...Array.from(new Set((files || []).map((f) => f.fileType)))];
 
   const filtered = (files || []).filter((file) => {
     const matchesSearch = file.fileName
@@ -254,7 +260,11 @@ export default function FileLibrary() {
                       {file.fileType}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {(file.fileSize / 1024).toFixed(1)} KB
+                      {file.fileSize < 1024
+                        ? `${file.fileSize} B`
+                        : file.fileSize < 1048576
+                          ? `${(file.fileSize / 1024).toFixed(1)} KB`
+                          : `${(file.fileSize / 1048576).toFixed(1)} MB`}
                     </span>
                   </div>
                 </div>
