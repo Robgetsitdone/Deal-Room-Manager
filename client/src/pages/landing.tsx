@@ -21,7 +21,7 @@ export default function LandingPage() {
               <FolderOpen className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-lg tracking-tight">
-              Deal Hub
+              DealBuddy
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export default function LandingPage() {
                 Share evaluation materials with your prospects in one place
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Deal Hub lets you organize files into a single, shareable link
+                DealBuddy lets you organize files into a single, shareable link
                 for your prospect. Upload your proposals, case studies, and
                 product info, then share a clean deal hub they can access
                 anytime.
@@ -200,7 +200,7 @@ export default function LandingPage() {
             <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
               <FolderOpen className="h-3 w-3 text-primary-foreground" />
             </div>
-            <span className="font-medium text-foreground">Deal Hub</span>
+            <span className="font-medium text-foreground">DealBuddy</span>
           </div>
           <p>Share your deal, close it faster.</p>
         </div>

@@ -334,7 +334,7 @@ export default function PublicRoom() {
 
         <div className="pt-6 border-t text-center">
           <p className="text-xs text-muted-foreground">
-            Powered by Deal Hub
+            Powered by DealBuddy
           </p>
         </div>
       </div>

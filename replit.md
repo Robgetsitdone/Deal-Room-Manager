@@ -1,9 +1,10 @@
-# Deal Hub Platform
+# DealBuddy Platform
 
 ## Overview
 A platform for sales teams to share evaluation materials with prospects through branded, shareable "deal hubs." Users upload files to a centralized library, organize them into deal hubs with custom branding, share via unique links, and track engagement analytics.
 
 ## Recent Changes
+- 2026-02-12: Rebranded website name to "DealBuddy" (friendly brand name); concept of "deal hub" retained for shareable content spaces
 - 2026-02-12: Rebranded from "DealRoom" to "Deal Hub" across entire app
   - Landing page rewritten: clean messaging about sharing evaluation materials, no pricing/credit card language
   - All user-facing copy updated to "Deal Hub" terminology
@@ -41,5 +42,6 @@ A platform for sales teams to share evaluation materials with prospects through 
 7. Admin views analytics dashboard with charts
 
 ## User Preferences
-- Brand name: "Deal Hub" (not "Deal Room")
+- Website/brand name: "DealBuddy" (friendly, approachable)
+- Product concept: Users create "deal hubs" to share with prospects
 - Landing page: Clean, professional. Focus on sharing evaluation materials. No credit card or pricing language.

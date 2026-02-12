@@ -54,7 +54,7 @@ export function AppSidebar() {
             <FolderOpen className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-semibold text-base tracking-tight">
-            Deal Hub
+            DealBuddy
           </span>
         </div>
       </SidebarHeader>
