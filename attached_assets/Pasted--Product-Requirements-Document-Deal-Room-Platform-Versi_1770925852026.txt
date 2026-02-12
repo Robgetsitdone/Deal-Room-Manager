@@ -1,0 +1,660 @@
+# Product Requirements Document: Deal Room Platform
+
+**Version:** 2.0
+**Author:** Rob
+**Date:** February 12, 2026
+**Build Target:** Replit (full-stack web app)
+
+---
+
+## 1. Product Overview
+
+### What We're Building
+
+A dead-simple deal room platform. Sales reps create branded, shareable content rooms for their prospects — upload files, drop in links, customize the look — and get full analytics on who opened it, what they clicked, how long they spent. Think Notion meets Dropbox meets buyer engagement tracking.
+
+### The Problem
+
+Reps email PDFs and slide decks as attachments. They have zero idea if the prospect opened them, which pages they read, or who on the buying committee even looked at it. Follow-up becomes guesswork. Meanwhile, prospects get a messy inbox full of loose files with no context.
+
+### The Solution
+
+A single shareable link per deal that gives the prospect a clean, branded page with all their content organized in one place. On the backend, the rep sees exactly who viewed what, when, and for how long.
+
+### Core Feature Set
+
+1. **Deal Room Builder** — Create a room, upload files, add descriptions, set the order, brand it
+2. **Public Share Link** — One link per room, no login required for the prospect, optional email gate
+3. **File Library** — Central database of all uploaded files across deal rooms, reusable
+4. **Engagement Analytics** — Real-time tracking of views, clicks, time per asset, viewer identity
+5. **Auth & Team Management** — Login, invite teammates, manage who can create/view rooms
+
+### Target Users
+
+| Persona | What They Do |
+|---------|-------------|
+| **Sales Rep (AE/SDR)** | Creates deal rooms, uploads content, shares links, checks analytics |
+| **Sales Manager** | Views team-wide deal room activity, sees which deals are getting engagement |
+| **Admin** | Manages users, org settings, file library |
+| **Prospect (external)** | Opens the share link, views content — no login needed |
+
+---
+
+## 2. Tech Stack
+
+```
+Frontend:        Next.js 14 (App Router) + Tailwind CSS + shadcn/ui
+Backend:         Next.js API Routes
+Database:        PostgreSQL (Neon free tier or Replit DB add-on)
+Auth:            Clerk (fastest setup on Replit) or NextAuth.js
+File Storage:    Uploadthing (easiest on Replit) or Cloudflare R2
+ORM:             Prisma
+Analytics:       Custom event tracking (stored in PostgreSQL)
+Deployment:      Replit Deployments
+```
+
+### Why These Choices
+
+- **Clerk** over NextAuth: 5-minute setup, prebuilt components, handles invites/teams out of the box
+- **Uploadthing** over raw S3: designed for Next.js, handles upload UI and storage in one package
+- **PostgreSQL + Prisma**: type-safe, migrations work great on Replit, free tier on Neon handles this scale easily
+- **No external analytics service**: we want granular, custom event data — easier to just store it ourselves
+
+---
+
+## 3. Data Models
+
+```prisma
+// ─── AUTH & ORG ─────────────────────────────────────
+
+model Organization {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  logoUrl     String?
+  brandColor  String     @default("#2563EB")  // Default blue
+  plan        Plan       @default(FREE)
+  users       User[]
+  dealRooms   DealRoom[]
+  files       File[]
+  createdAt   DateTime   @default(now())
+}
+
+model User {
+  id             String       @id @default(cuid())
+  clerkId        String       @unique          // Clerk external ID
+  email          String       @unique
+  name           String
+  avatarUrl      String?
+  role           UserRole     @default(MEMBER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  dealRooms      DealRoom[]   @relation("createdBy")
+  createdAt      DateTime     @default(now())
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum Plan {
+  FREE        // 5 deal rooms, 500MB storage
+  PRO         // Unlimited rooms, 10GB, custom branding
+  TEAM        // Everything + team analytics + SSO
+}
+
+// ─── FILE LIBRARY ───────────────────────────────────
+
+model File {
+  id             String          @id @default(cuid())
+  fileName       String
+  fileUrl        String
+  fileType       String          // "pdf", "pptx", "docx", "png", "mp4", etc.
+  fileSize       Int             // Bytes
+  thumbnailUrl   String?         // Auto-generated preview image
+  uploadedById   String
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  dealRoomAssets DealRoomAsset[]  // A file can be in multiple deal rooms
+  createdAt      DateTime        @default(now())
+}
+
+// ─── DEAL ROOMS ─────────────────────────────────────
+
+model DealRoom {
+  id             String          @id @default(cuid())
+  name           String          // Internal name (e.g., "Acme Corp — Q1 Proposal")
+  headline       String?         // Public-facing headline shown to prospect
+  welcomeMessage String?         // Optional intro text on the share page
+  brandColor     String?         // Override org default
+  logoUrl        String?         // Override org default
+  backgroundUrl  String?         // Optional hero image
+  status         DealRoomStatus  @default(DRAFT)
+  shareToken     String          @unique @default(cuid())
+  requireEmail   Boolean         @default(false)  // Gate access behind email capture
+  password       String?         // Optional password protection
+  allowDownload  Boolean         @default(true)
+  expiresAt      DateTime?
+  createdById    String
+  createdBy      User            @relation("createdBy", fields: [createdById], references: [id])
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  assets         DealRoomAsset[]
+  views          DealRoomView[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+enum DealRoomStatus {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+  ARCHIVED
+}
+
+model DealRoomAsset {
+  id          String             @id @default(cuid())
+  dealRoomId  String
+  dealRoom    DealRoom           @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  fileId      String
+  file        File               @relation(fields: [fileId], references: [id])
+  title       String             // Display title (can differ from file name)
+  description String?            // Short description shown to prospect
+  order       Int                // Sort order in the room
+  section     String?            // Optional grouping label ("Proposal", "Case Studies", etc.)
+  clicks      AssetClick[]
+  createdAt   DateTime           @default(now())
+}
+
+// ─── ANALYTICS ──────────────────────────────────────
+
+model DealRoomView {
+  id           String       @id @default(cuid())
+  dealRoomId   String
+  dealRoom     DealRoom     @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  visitorId    String       @default(cuid())  // Anonymous ID (cookie-based)
+  viewerEmail  String?      // Captured if requireEmail is on
+  viewerName   String?
+  viewerCompany String?
+  ipAddress    String?
+  city         String?      // Derived from IP (free geo-IP lookup)
+  country      String?
+  userAgent    String?
+  device       String?      // "desktop", "mobile", "tablet" (parsed from UA)
+  referrer     String?      // Where they came from
+  duration     Int?         // Total seconds on the deal room page
+  assetClicks  AssetClick[]
+  viewedAt     DateTime     @default(now())
+}
+
+model AssetClick {
+  id          String        @id @default(cuid())
+  assetId     String
+  asset       DealRoomAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  viewId      String
+  view        DealRoomView  @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  duration    Int?          // Seconds spent viewing this specific asset
+  downloaded  Boolean       @default(false)  // Did they download it?
+  clickedAt   DateTime      @default(now())
+}
+```
+
+---
+
+## 4. API Routes
+
+### Auth (handled mostly by Clerk, plus custom sync)
+
+```
+POST   /api/auth/sync             Clerk webhook → sync user to our DB
+GET    /api/auth/me                Current user + org context
+```
+
+### Deal Rooms
+
+```
+GET    /api/deal-rooms                 List all rooms for current org
+POST   /api/deal-rooms                 Create new room
+GET    /api/deal-rooms/:id             Get room detail + assets + analytics summary
+PUT    /api/deal-rooms/:id             Update room settings (name, branding, access controls)
+DELETE /api/deal-rooms/:id             Archive room
+PUT    /api/deal-rooms/:id/publish     Set status to PUBLISHED (generates share link)
+PUT    /api/deal-rooms/:id/expire      Manually expire a room
+POST   /api/deal-rooms/:id/duplicate   Clone a room (with same assets, fresh analytics)
+```
+
+### Assets (within a Deal Room)
+
+```
+POST   /api/deal-rooms/:id/assets              Add file(s) to room
+PUT    /api/deal-rooms/:id/assets/:assetId      Update asset title, description, order, section
+DELETE /api/deal-rooms/:id/assets/:assetId      Remove asset from room
+PUT    /api/deal-rooms/:id/assets/reorder       Bulk reorder assets (accepts array of { id, order })
+```
+
+### File Library
+
+```
+GET    /api/files                   List all files in org (searchable, filterable by type)
+POST   /api/files/upload            Upload new file (returns file record)
+DELETE /api/files/:id               Delete file (fails if used in active deal rooms)
+GET    /api/files/:id/usage         Which deal rooms use this file
+```
+
+### Public Share (no auth — prospect-facing)
+
+```
+GET    /api/share/:token            Get deal room public data (checks expiry, password, email gate)
+POST   /api/share/:token/verify     Verify password or submit email to unlock
+POST   /api/share/:token/track      Track a view event (page load)
+POST   /api/share/:token/click      Track an asset click
+POST   /api/share/:token/duration   Heartbeat — update time spent (sent every 30s via JS)
+```
+
+### Analytics
+
+```
+GET    /api/analytics/overview                  Org-wide: total rooms, views, clicks, top rooms
+GET    /api/analytics/deal-rooms/:id            Per-room: viewer list, timeline, asset breakdown
+GET    /api/analytics/deal-rooms/:id/viewers     Viewer detail: who, when, what they clicked, duration
+GET    /api/analytics/deal-rooms/:id/assets      Per-asset engagement: clicks, avg duration, downloads
+GET    /api/analytics/team                       Team leaderboard: rooms created, total engagement per rep
+```
+
+### Admin
+
+```
+GET    /api/admin/users              List org users
+POST   /api/admin/users/invite       Send invite (via Clerk)
+PUT    /api/admin/users/:id/role     Change role
+DELETE /api/admin/users/:id          Remove from org
+PUT    /api/admin/settings           Update org name, logo, default brand color
+```
+
+---
+
+## 5. Pages & UI
+
+### Internal App (requires login)
+
+| Page | Route | What It Does |
+|------|-------|-------------|
+| **Dashboard** | `/` | Quick stats: rooms created, total views this week, most-viewed rooms, recent viewer activity feed |
+| **Deal Rooms** | `/rooms` | Card grid of all rooms. Status badges (draft/live/expired). Search + filter. "New Room" button |
+| **Room Builder** | `/rooms/new` | Step 1: Name + headline + welcome message. Step 2: Add files (upload or pick from library). Step 3: Arrange order + sections. Step 4: Branding (color, logo). Step 5: Access (email gate, password, expiry). Preview + Publish |
+| **Room Detail** | `/rooms/:id` | Left: room settings + asset list (editable). Right: live analytics — viewer timeline, click heatmap, engagement score |
+| **File Library** | `/files` | Grid/list of all uploaded files. Drag-and-drop upload. Filter by type. Shows which rooms each file is in |
+| **Analytics** | `/analytics` | Org-wide engagement dashboard. Filter by date range, rep, room. Charts: views over time, top rooms, top assets, viewer companies |
+| **Team** | `/team` | User list, roles, invite button |
+| **Settings** | `/settings` | Org branding defaults, plan info |
+
+### Public Deal Room (no login)
+
+| Page | Route | What It Does |
+|------|-------|-------------|
+| **Email Gate** | `/r/:token` (if enabled) | Clean page asking for name + email + company before entering |
+| **Deal Room** | `/r/:token` | Branded page: logo + headline at top, welcome message, asset cards in sections. Click asset → opens viewer/download. Tracks everything |
+
+### Deal Room Public Page Design
+
+```
+┌──────────────────────────────────────────┐
+│  [Logo]                                  │
+│                                          │
+│  Welcome to your resource hub            │
+│  Here's everything for our conversation  │
+│                                          │
+├──────────────────────────────────────────┤
+│                                          │
+│  📁 PROPOSAL                             │
+│  ┌─────────┐ ┌─────────┐                │
+│  │ 📄 PDF  │ │ 📊 PPTX │                │
+│  │ Pricing │ │ Deck    │                │
+│  │ Proposal│ │ Overview│                │
+│  └─────────┘ └─────────┘                │
+│                                          │
+│  📁 CASE STUDIES                         │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  │ 📄 PDF  │ │ 📄 PDF  │ │ 🎬 Video│   │
+│  │ Acme Co │ │ Beta Inc│ │ Demo    │   │
+│  └─────────┘ └─────────┘ └─────────┘   │
+│                                          │
+│                    Powered by DealRoom   │
+└──────────────────────────────────────────┘
+```
+
+---
+
+## 6. Analytics Deep Dive
+
+### What We Track
+
+**Per Deal Room:**
+
+| Metric | How |
+|--------|-----|
+| Total views | Count of `DealRoomView` records |
+| Unique visitors | Count of distinct `visitorId` values |
+| Identified viewers | Views with an email captured |
+| Avg time on page | Average `duration` across views |
+| Asset click-through rate | Clicks / views |
+| Most-clicked asset | Asset with highest click count |
+| Download count | Sum of `AssetClick` where `downloaded = true` |
+
+**Per Viewer (identified by email or visitorId):**
+
+| Metric | How |
+|--------|-----|
+| Visit count | Number of `DealRoomView` records for this visitor |
+| Total time spent | Sum of `duration` across visits |
+| Assets viewed | List of `AssetClick` records with timestamps |
+| Last active | Most recent `viewedAt` |
+| Device / location | Parsed from `userAgent` + IP geo-lookup |
+
+**Per Asset:**
+
+| Metric | How |
+|--------|-----|
+| Click count | Count of `AssetClick` records |
+| Unique viewers who clicked | Distinct `viewId` → `visitorId` |
+| Avg view duration | Average `duration` on `AssetClick` |
+| Download count | `downloaded = true` count |
+
+### Real-Time Tracking Implementation
+
+The public deal room page includes a lightweight JS tracker:
+
+```javascript
+// On page load → POST /api/share/:token/track
+// Returns a viewId
+
+// On asset click → POST /api/share/:token/click
+// Sends { assetId, viewId }
+
+// Every 30 seconds → POST /api/share/:token/duration
+// Sends { viewId, totalSeconds }
+// (Uses visibilitychange API to pause when tab is hidden)
+
+// On asset download → POST /api/share/:token/click
+// Sends { assetId, viewId, downloaded: true }
+```
+
+### Analytics Dashboard Wireframe
+
+```
+┌─────────────────────────────────────────────────┐
+│  DEAL ROOM ANALYTICS            [Date Range ▾]  │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐        │
+│  │  47  │  │  31  │  │ 2:34 │  │  83% │        │
+│  │Views │  │Unique│  │ Avg  │  │Click │        │
+│  │      │  │Visit.│  │ Time │  │Rate  │        │
+│  └──────┘  └──────┘  └──────┘  └──────┘        │
+│                                                  │
+│  VIEWS OVER TIME                                 │
+│  ▁▂▃▅▇█▇▅▃▂▁▂▃▅▇  (line chart, daily)          │
+│                                                  │
+│  RECENT VIEWERS                                  │
+│  ┌──────────────────────────────────────────┐   │
+│  │ sarah@acme.com    │ 3 visits │ 4:12 total│   │
+│  │ mike@acme.com     │ 1 visit  │ 1:30 total│   │
+│  │ Anonymous (NYC)   │ 2 visits │ 2:45 total│   │
+│  └──────────────────────────────────────────┘   │
+│                                                  │
+│  ASSET ENGAGEMENT                                │
+│  ┌──────────────────────────────────────────┐   │
+│  │ Pricing Proposal.pdf   │ 38 clicks │ ██████│ │
+│  │ Product Overview.pptx  │ 29 clicks │ █████ │ │
+│  │ Acme Case Study.pdf    │ 14 clicks │ ███   │ │
+│  │ Demo Recording.mp4     │ 8 clicks  │ ██    │ │
+│  └──────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Phased Build Plan
+
+### Phase 1: Auth + File Library (3-4 days)
+
+**Goal:** Users can sign up, create an org, and upload files
+
+- [ ] Next.js 14 + Tailwind + shadcn/ui scaffold
+- [ ] Clerk integration (sign up, sign in, org creation)
+- [ ] Prisma schema + PostgreSQL setup (Neon)
+- [ ] Clerk webhook to sync users to DB
+- [ ] File upload endpoint (Uploadthing or S3)
+- [ ] File Library page: upload, list, delete, filter by type
+- [ ] Thumbnail generation for PDFs and images
+
+### Phase 2: Deal Room CRUD (4-5 days)
+
+**Goal:** Reps can create and manage deal rooms
+
+- [ ] Deal Room creation flow (name, headline, welcome message)
+- [ ] Add files from library to a room
+- [ ] Drag-and-drop reorder assets
+- [ ] Section grouping for assets
+- [ ] Branding customization (color picker, logo upload)
+- [ ] Access controls (email gate toggle, password, expiry date)
+- [ ] Deal Room list page with status badges and search
+- [ ] Publish / unpublish / archive actions
+- [ ] Duplicate room functionality
+
+### Phase 3: Public Share Page (3-4 days)
+
+**Goal:** Prospects can view deal rooms via a share link
+
+- [ ] Public route `/r/:token` — renders deal room with branding
+- [ ] Email gate page (if enabled) — captures name, email, company
+- [ ] Password protection check
+- [ ] Expiry check (show "this room has expired" if past date)
+- [ ] Asset cards with file type icons and descriptions
+- [ ] Section grouping in the UI
+- [ ] Click to open asset (PDF viewer / image viewer / video player / download)
+- [ ] Responsive design (works on mobile)
+- [ ] "Powered by [Product Name]" footer
+
+### Phase 4: Analytics Tracking (3-4 days)
+
+**Goal:** Every interaction on the public page is tracked
+
+- [ ] Tracking script on public page: page view, clicks, duration heartbeat, downloads
+- [ ] `DealRoomView` created on page load (captures IP, UA, referrer, geo)
+- [ ] `AssetClick` created on each asset open
+- [ ] Duration tracking with 30-second heartbeats (pauses when tab hidden)
+- [ ] Visitor identity resolution: anonymous cookie → identified once email submitted
+- [ ] Device/browser parsing from user agent
+- [ ] City/country from free IP geolocation API (ip-api.com or similar)
+
+### Phase 5: Analytics Dashboard (4-5 days)
+
+**Goal:** Reps and managers can see engagement data
+
+- [ ] Room Detail analytics panel: summary stats, viewer list, asset breakdown
+- [ ] Viewer detail view: visit history, assets clicked, time per asset
+- [ ] Views over time chart (recharts)
+- [ ] Asset engagement bar chart
+- [ ] Org-wide analytics page: top rooms, total engagement, team leaderboard
+- [ ] Date range filter
+- [ ] Real-time activity feed on dashboard ("sarah@acme.com just viewed Pricing Proposal")
+- [ ] Email notification when a deal room gets its first view (optional)
+
+### Phase 6: Polish (3-4 days)
+
+**Goal:** Production-ready
+
+- [ ] Invite teammates flow (Clerk invitations + role sync)
+- [ ] Settings page (org branding defaults, plan info)
+- [ ] Empty states for all pages
+- [ ] Loading skeletons
+- [ ] Error handling and toast notifications
+- [ ] SEO + Open Graph tags on public deal room pages (for nice link previews)
+- [ ] Rate limiting on public tracking endpoints
+- [ ] Mobile responsiveness pass
+- [ ] Seed data script for demo
+
+**Total estimated build time: ~3-4 weeks**
+
+---
+
+## 8. Project Structure (Replit)
+
+```
+/
+├── app/
+│   ├── (auth)/
+│   │   ├── sign-in/page.tsx
+│   │   └── sign-up/page.tsx
+│   ├── (dashboard)/
+│   │   ├── layout.tsx              # Sidebar nav + Clerk provider
+│   │   ├── page.tsx                # Dashboard home
+│   │   ├── rooms/
+│   │   │   ├── page.tsx            # Deal room list
+│   │   │   ├── new/page.tsx        # Room builder
+│   │   │   └── [id]/page.tsx       # Room detail + analytics
+│   │   ├── files/page.tsx          # File library
+│   │   ├── analytics/page.tsx      # Org-wide analytics
+│   │   ├── team/page.tsx           # Team management
+│   │   └── settings/page.tsx       # Org settings
+│   ├── r/
+│   │   └── [token]/page.tsx        # Public deal room page
+│   └── api/
+│       ├── auth/sync/route.ts      # Clerk webhook
+│       ├── deal-rooms/
+│       │   ├── route.ts            # GET list, POST create
+│       │   └── [id]/
+│       │       ├── route.ts        # GET, PUT, DELETE
+│       │       ├── publish/route.ts
+│       │       ├── duplicate/route.ts
+│       │       └── assets/
+│       │           ├── route.ts    # POST add, PUT reorder
+│       │           └── [assetId]/route.ts
+│       ├── files/
+│       │   ├── route.ts            # GET list, POST upload
+│       │   └── [id]/route.ts       # DELETE, GET usage
+│       ├── share/
+│       │   └── [token]/
+│       │       ├── route.ts        # GET public data
+│       │       ├── verify/route.ts # POST email/password
+│       │       ├── track/route.ts  # POST view event
+│       │       ├── click/route.ts  # POST asset click
+│       │       └── duration/route.ts # POST heartbeat
+│       ├── analytics/
+│       │   ├── overview/route.ts
+│       │   └── deal-rooms/
+│       │       └── [id]/
+│       │           ├── route.ts
+│       │           ├── viewers/route.ts
+│       │           └── assets/route.ts
+│       └── admin/
+│           ├── users/route.ts
+│           └── settings/route.ts
+├── components/
+│   ├── ui/                         # shadcn/ui components
+│   ├── deal-room/
+│   │   ├── room-card.tsx
+│   │   ├── room-builder.tsx
+│   │   ├── asset-list.tsx
+│   │   ├── branding-editor.tsx
+│   │   └── access-controls.tsx
+│   ├── analytics/
+│   │   ├── stats-cards.tsx
+│   │   ├── views-chart.tsx
+│   │   ├── viewer-table.tsx
+│   │   └── asset-engagement.tsx
+│   ├── files/
+│   │   ├── file-grid.tsx
+│   │   ├── upload-zone.tsx
+│   │   └── file-picker-modal.tsx
+│   └── public/
+│       ├── deal-room-page.tsx
+│       ├── email-gate.tsx
+│       └── asset-card.tsx
+├── lib/
+│   ├── db.ts                       # Prisma client
+│   ├── auth.ts                     # Clerk helpers
+│   ├── upload.ts                   # File upload helpers
+│   ├── geo.ts                      # IP geolocation
+│   ├── tracking.ts                 # Client-side tracking script
+│   └── utils.ts
+├── prisma/
+│   └── schema.prisma
+├── public/
+│   └── placeholder-logo.svg
+├── .env
+├── .replit
+├── package.json
+└── tailwind.config.ts
+```
+
+---
+
+## 9. Getting Started on Replit
+
+```bash
+# 1. Create Next.js project
+npx create-next-app@latest . --typescript --tailwind --app --src-dir=false
+
+# 2. Install core deps
+npm install prisma @prisma/client
+npm install @clerk/nextjs
+npm install uploadthing @uploadthing/react
+npm install recharts
+npm install ua-parser-js
+
+# 3. Install shadcn/ui
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button card input label dialog dropdown-menu \
+  table tabs badge separator avatar sheet toast skeleton
+
+# 4. Set up Prisma
+npx prisma init
+# → paste schema from this PRD into prisma/schema.prisma
+# → set DATABASE_URL in .env (Neon connection string)
+npx prisma migrate dev --name init
+npx prisma generate
+
+# 5. Set up Clerk
+# → Create app at clerk.com, grab keys
+# → Add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY to .env
+
+# 6. Set up Uploadthing
+# → Create app at uploadthing.com, grab keys
+# → Add UPLOADTHING_SECRET and UPLOADTHING_APP_ID to .env
+
+# 7. Run it
+npm run dev
+```
+
+### Environment Variables
+
+```env
+DATABASE_URL="postgresql://..."
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
+CLERK_SECRET_KEY="sk_..."
+UPLOADTHING_SECRET="sk_..."
+UPLOADTHING_APP_ID="..."
+NEXT_PUBLIC_APP_URL="https://your-repl.replit.app"
+```
+
+---
+
+## 10. Key Decisions & Trade-offs
+
+| Decision | Why |
+|----------|-----|
+| **No Chrome extension** | Keeps scope tight. Deal rooms are standalone web pages |
+| **Clerk over NextAuth** | Team/org management built in. Less code to write |
+| **Cookie-based visitor ID** | Tracks repeat visitors without requiring login. Upgrades to identified when they submit email |
+| **PostgreSQL for analytics** | At this scale (thousands of events, not millions), a separate analytics DB is overkill. Postgres handles it fine with proper indexes |
+| **Uploadthing over raw S3** | One less thing to configure. Handles upload UI components too |
+| **No AI features in V1** | Keep it simple. AI summarization of deal room engagement can come in V2 |
+| **Sections not folders** | Assets are flat with optional section labels, not nested folders. Simpler data model, simpler UI |
+
+---
+
+*This PRD can be pasted directly into Replit's AI agent. It has everything needed to build: data models, API routes, project structure, and a phased plan scoped to ~3-4 weeks for a solo builder.*
