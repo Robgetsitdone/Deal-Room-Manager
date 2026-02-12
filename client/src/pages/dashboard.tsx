@@ -67,13 +67,13 @@ export default function Dashboard() {
             Welcome back{user?.firstName ? `, ${user.firstName}` : ""}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Here's what's happening with your deal rooms.
+            Here's what's happening with your deal hubs.
           </p>
         </div>
         <Link href="/rooms/new">
           <Button data-testid="button-new-room">
             <Plus className="h-4 w-4 mr-2" />
-            New Deal Room
+            New Deal Hub
           </Button>
         </Link>
       </div>
@@ -90,7 +90,7 @@ export default function Dashboard() {
           <>
             <Card className="p-5 space-y-1">
               <div className="flex items-center justify-between gap-1">
-                <p className="text-sm text-muted-foreground">Total Rooms</p>
+                <p className="text-sm text-muted-foreground">Total Hubs</p>
                 <FolderOpen className="h-4 w-4 text-muted-foreground" />
               </div>
               <p
@@ -143,7 +143,7 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="font-semibold">Recent Deal Rooms</h2>
+            <h2 className="font-semibold">Recent Deal Hubs</h2>
             <Link href="/rooms">
               <Button variant="ghost" size="sm" data-testid="link-view-all-rooms">
                 View All
@@ -164,12 +164,12 @@ export default function Dashboard() {
             <Card className="p-8 text-center">
               <FolderOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                No deal rooms yet. Create your first one.
+                No deal hubs yet. Create your first one.
               </p>
               <Link href="/rooms/new">
                 <Button className="mt-4" data-testid="button-create-first-room">
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Deal Room
+                  Create Deal Hub
                 </Button>
               </Link>
             </Card>

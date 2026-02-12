@@ -128,7 +128,7 @@ export class DatabaseStorage implements IStorage {
   async deleteFile(id: string): Promise<void> {
     const usages = await db.select().from(dealRoomAssets).where(eq(dealRoomAssets.fileId, id));
     if (usages.length > 0) {
-      throw new Error("File is used in active deal rooms");
+      throw new Error("File is used in active deal hubs");
     }
     await db.delete(files).where(eq(files.id, id));
   }

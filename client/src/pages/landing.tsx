@@ -5,10 +5,10 @@ import {
   FolderOpen,
   BarChart3,
   Share2,
-  Shield,
   ArrowRight,
-  Zap,
+  FileText,
   Eye,
+  Link as LinkIcon,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -21,7 +21,7 @@ export default function LandingPage() {
               <FolderOpen className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-lg tracking-tight">
-              DealRoom
+              Deal Hub
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -42,36 +42,22 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-md bg-primary/10 px-3 py-1.5 text-sm text-primary font-medium">
-                <Zap className="h-3.5 w-3.5" />
-                Built for modern sales teams
-              </div>
               <h1 className="text-4xl sm:text-5xl font-serif font-bold tracking-tight leading-tight">
-                Close deals faster with{" "}
-                <span className="text-primary">branded content rooms</span>
+                Share evaluation materials with your prospects in one place
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Create beautiful, shareable deal rooms for your prospects.
-                Upload files, customize branding, and track exactly who viewed
-                what — all from one link.
+                Deal Hub lets you organize files into a single, shareable link
+                for your prospect. Upload your proposals, case studies, and
+                product info, then share a clean deal hub they can access
+                anytime.
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <a href="/api/login">
                   <Button size="lg" data-testid="button-hero-cta">
-                    Start for Free
+                    Create a Deal Hub
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </a>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
-                <span className="flex items-center gap-1.5">
-                  <Shield className="h-3.5 w-3.5" />
-                  No credit card required
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5" />
-                  Free forever plan
-                </span>
               </div>
             </div>
 
@@ -147,35 +133,35 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-serif font-bold tracking-tight">
-              Everything you need to win deals
+              How it works
             </h2>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto">
-              Stop sending loose attachments. Give your prospects a polished,
-              trackable experience.
+              Get your evaluation materials in front of prospects quickly and
+              professionally.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                icon: FolderOpen,
-                title: "Branded Deal Rooms",
-                desc: "Create beautiful, customizable content rooms with your logo, colors, and messaging. One link per deal.",
+                icon: FileText,
+                title: "Upload your files",
+                desc: "Add proposals, case studies, product sheets, and any other materials your prospect needs to evaluate your solution.",
+              },
+              {
+                icon: LinkIcon,
+                title: "Create a deal hub",
+                desc: "Organize your files into a branded deal hub with a custom headline and welcome message. One link, everything in one place.",
               },
               {
                 icon: BarChart3,
-                title: "Engagement Analytics",
-                desc: "See exactly who opened your room, which files they viewed, and how long they spent on each asset.",
-              },
-              {
-                icon: Share2,
-                title: "Instant Sharing",
-                desc: "Share a single link with your prospect. No login required. Optional email gate and password protection.",
+                title: "Share and track",
+                desc: "Send the link to your prospect. See who opened it, which files they viewed, and how long they spent reviewing each one.",
               },
             ].map((feature) => (
               <Card
                 key={feature.title}
-                className="p-6 space-y-3 hover-elevate"
+                className="p-6 space-y-3"
               >
                 <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
                   <feature.icon className="h-5 w-5 text-primary" />
@@ -190,15 +176,33 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="py-16 px-6 border-t">
+        <div className="max-w-2xl mx-auto text-center space-y-5">
+          <h2 className="text-2xl font-serif font-bold tracking-tight">
+            Stop sending loose email attachments
+          </h2>
+          <p className="text-muted-foreground">
+            Give your prospects a single, organized place to review everything
+            they need. Create your first deal hub in under a minute.
+          </p>
+          <a href="/api/login">
+            <Button size="lg" data-testid="button-bottom-cta">
+              Get Started
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </a>
+        </div>
+      </section>
+
       <footer className="border-t py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
               <FolderOpen className="h-3 w-3 text-primary-foreground" />
             </div>
-            <span className="font-medium text-foreground">DealRoom</span>
+            <span className="font-medium text-foreground">Deal Hub</span>
           </div>
-          <p>Built for sales teams that close.</p>
+          <p>Share your deal, close it faster.</p>
         </div>
       </footer>
     </div>

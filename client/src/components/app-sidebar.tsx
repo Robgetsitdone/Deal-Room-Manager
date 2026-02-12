@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Deal Rooms", url: "/rooms", icon: FolderOpen },
+  { title: "Deal Hubs", url: "/rooms", icon: FolderOpen },
   { title: "File Library", url: "/files", icon: FileText },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Team", url: "/team", icon: Users },
@@ -54,7 +54,7 @@ export function AppSidebar() {
             <FolderOpen className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-semibold text-base tracking-tight">
-            DealRoom
+            Deal Hub
           </span>
         </div>
       </SidebarHeader>

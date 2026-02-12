@@ -96,7 +96,7 @@ export default function Settings() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Used as the default color for new deal rooms.
+              Used as the default color for new deal hubs.
             </p>
           </div>
 

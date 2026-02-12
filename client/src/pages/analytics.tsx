@@ -52,7 +52,7 @@ export default function Analytics() {
           Analytics
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Track engagement across all your deal rooms.
+          Track engagement across all your deal hubs.
         </p>
       </div>
 
@@ -68,7 +68,7 @@ export default function Analytics() {
           <>
             <Card className="p-5 space-y-1">
               <div className="flex items-center justify-between gap-1">
-                <p className="text-sm text-muted-foreground">Active Rooms</p>
+                <p className="text-sm text-muted-foreground">Active Hubs</p>
                 <FolderOpen className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold" data-testid="text-active-rooms">
@@ -223,7 +223,7 @@ export default function Analytics() {
       </div>
 
       <Card className="p-5 space-y-4">
-        <h3 className="font-semibold">Top Deal Rooms</h3>
+        <h3 className="font-semibold">Top Deal Hubs</h3>
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (

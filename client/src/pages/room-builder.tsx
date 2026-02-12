@@ -76,12 +76,12 @@ export default function RoomBuilder() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/deal-rooms"] });
-      toast({ title: "Deal room created successfully" });
+      toast({ title: "Deal hub created successfully" });
       navigate(`/rooms/${data.id}`);
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to create deal room",
+        title: "Failed to create deal hub",
         description: error.message,
         variant: "destructive",
       });
@@ -123,10 +123,10 @@ export default function RoomBuilder() {
         </Button>
         <div>
           <h1 className="text-2xl font-serif font-bold tracking-tight">
-            Create Deal Room
+            Create Deal Hub
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Set up a new content room for your prospect.
+            Set up a new deal hub for your prospect.
           </p>
         </div>
       </div>
@@ -175,7 +175,7 @@ export default function RoomBuilder() {
                 data-testid="input-headline"
               />
               <p className="text-xs text-muted-foreground">
-                Shown to prospects when they open the deal room.
+                Shown to prospects when they open the deal hub.
               </p>
             </div>
             <div className="space-y-2">
@@ -199,7 +199,7 @@ export default function RoomBuilder() {
               <div>
                 <h3 className="font-semibold">Add Files</h3>
                 <p className="text-sm text-muted-foreground">
-                  Select files from your library to include in this room.
+                  Select files from your library to include in this hub.
                 </p>
               </div>
             </div>
@@ -359,10 +359,10 @@ export default function RoomBuilder() {
                   </div>
                   <div>
                     <p className="font-semibold">
-                      {headline || name || "Your Deal Room"}
+                      {headline || name || "Your Deal Hub"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {welcomeMessage || "Welcome to your deal room"}
+                      {welcomeMessage || "Welcome to your deal hub"}
                     </p>
                   </div>
                 </div>
@@ -381,7 +381,7 @@ export default function RoomBuilder() {
               <div>
                 <Label>Require Email to View</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Prospects must enter their email before accessing the room.
+                  Prospects must enter their email before accessing the hub.
                 </p>
               </div>
               <Switch
@@ -405,7 +405,7 @@ export default function RoomBuilder() {
               <div>
                 <Label>Allow Downloads</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Let prospects download files from the room.
+                  Let prospects download files from the hub.
                 </p>
               </div>
               <Switch
@@ -440,7 +440,7 @@ export default function RoomBuilder() {
             disabled={!canSubmit || createMutation.isPending}
             data-testid="button-create-room"
           >
-            {createMutation.isPending ? "Creating..." : "Create Deal Room"}
+            {createMutation.isPending ? "Creating..." : "Create Deal Hub"}
           </Button>
         )}
       </div>

@@ -47,16 +47,16 @@ export default function Rooms() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-serif font-bold tracking-tight">
-            Deal Rooms
+            Deal Hubs
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Manage your sales content rooms.
+            Manage your deal hubs.
           </p>
         </div>
         <Link href="/rooms/new">
           <Button data-testid="button-new-room">
             <Plus className="h-4 w-4 mr-2" />
-            New Room
+            New Hub
           </Button>
         </Link>
       </div>
@@ -65,7 +65,7 @@ export default function Rooms() {
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search rooms..."
+            placeholder="Search hubs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -101,17 +101,17 @@ export default function Rooms() {
       ) : filtered.length === 0 ? (
         <Card className="p-12 text-center">
           <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-semibold text-lg mb-1">No deal rooms found</h3>
+          <h3 className="font-semibold text-lg mb-1">No deal hubs found</h3>
           <p className="text-sm text-muted-foreground mb-4">
             {search || statusFilter !== "all"
               ? "Try adjusting your filters."
-              : "Create your first deal room to get started."}
+              : "Create your first deal hub to get started."}
           </p>
           {!search && statusFilter === "all" && (
             <Link href="/rooms/new">
               <Button data-testid="button-create-first">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Deal Room
+                Create Deal Hub
               </Button>
             </Link>
           )}

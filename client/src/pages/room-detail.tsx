@@ -49,7 +49,7 @@ export default function RoomDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deal-rooms", roomId] });
       queryClient.invalidateQueries({ queryKey: ["/api/deal-rooms"] });
-      toast({ title: "Deal room published!" });
+      toast({ title: "Deal hub published!" });
     },
   });
 
@@ -59,7 +59,7 @@ export default function RoomDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deal-rooms", roomId] });
       queryClient.invalidateQueries({ queryKey: ["/api/deal-rooms"] });
-      toast({ title: "Deal room archived" });
+      toast({ title: "Deal hub archived" });
     },
   });
 
@@ -67,7 +67,7 @@ export default function RoomDetail() {
     mutationFn: () => apiRequest("DELETE", `/api/deal-rooms/${roomId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deal-rooms"] });
-      toast({ title: "Deal room deleted" });
+      toast({ title: "Deal hub deleted" });
       navigate("/rooms");
     },
   });
@@ -97,7 +97,7 @@ export default function RoomDetail() {
   if (!room) {
     return (
       <div className="p-6 text-center">
-        <p className="text-muted-foreground">Deal room not found.</p>
+        <p className="text-muted-foreground">Deal hub not found.</p>
       </div>
     );
   }
@@ -181,7 +181,7 @@ export default function RoomDetail() {
           <Button
             variant="outline"
             onClick={() => {
-              if (confirm("Are you sure you want to delete this deal room?")) {
+              if (confirm("Are you sure you want to delete this deal hub?")) {
                 deleteMutation.mutate();
               }
             }}
@@ -253,7 +253,7 @@ export default function RoomDetail() {
             <Card className="p-8 text-center">
               <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                No assets in this room yet.
+                No assets in this hub yet.
               </p>
             </Card>
           ) : (
@@ -294,7 +294,7 @@ export default function RoomDetail() {
             <Card className="p-8 text-center">
               <Eye className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                No viewers yet. Share your room to start tracking.
+                No viewers yet. Share your hub to start tracking.
               </p>
             </Card>
           ) : (

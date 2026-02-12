@@ -158,9 +158,9 @@ export default function PublicRoom() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center px-6">
           <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h1 className="text-xl font-semibold mb-2">Room Not Available</h1>
+          <h1 className="text-xl font-semibold mb-2">Hub Not Available</h1>
           <p className="text-sm text-muted-foreground">
-            This deal room may have expired or doesn't exist.
+            This deal hub may have expired or doesn't exist.
           </p>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function PublicRoom() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter room password"
+                placeholder="Enter password"
                 data-testid="input-gate-password"
               />
             </div>
@@ -334,7 +334,7 @@ export default function PublicRoom() {
 
         <div className="pt-6 border-t text-center">
           <p className="text-xs text-muted-foreground">
-            Powered by DealRoom
+            Powered by Deal Hub
           </p>
         </div>
       </div>

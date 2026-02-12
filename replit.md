@@ -1,13 +1,16 @@
-# DealRoom Platform
+# Deal Hub Platform
 
 ## Overview
-A comprehensive deal room platform that enables sales teams to create branded content spaces ("deal rooms") for prospects. Users can upload files, organize them into customizable deal rooms with branding, share via unique links, and track engagement analytics.
+A platform for sales teams to share evaluation materials with prospects through branded, shareable "deal hubs." Users upload files to a centralized library, organize them into deal hubs with custom branding, share via unique links, and track engagement analytics.
 
 ## Recent Changes
-- 2026-02-12: Initial full-stack implementation complete
+- 2026-02-12: Rebranded from "DealRoom" to "Deal Hub" across entire app
+  - Landing page rewritten: clean messaging about sharing evaluation materials, no pricing/credit card language
+  - All user-facing copy updated to "Deal Hub" terminology
+- 2026-02-12: Initial full-stack implementation
   - Database schema with 7 tables (organizations, organization_members, files, deal_rooms, deal_room_assets, deal_room_views, asset_clicks)
   - All API routes with org-ownership security checks
-  - Complete frontend with landing page, dashboard, rooms, file library, analytics, team, settings
+  - Complete frontend with landing page, dashboard, hubs, file library, analytics, team, settings
   - Public share page with email gate, password protection, and view/click tracking
   - Object storage integration for file uploads (secured with auth)
   - Replit Auth for authentication
@@ -22,7 +25,7 @@ A comprehensive deal room platform that enables sales teams to create branded co
 
 ### Key Files
 - `shared/schema.ts` - All database models and Zod schemas
-- `server/routes.ts` - API endpoints (deal rooms, files, analytics, team, public share)
+- `server/routes.ts` - API endpoints (deal hubs, files, analytics, team, public share)
 - `server/storage.ts` - Database storage layer (IStorage interface + DatabaseStorage)
 - `client/src/App.tsx` - Main app with routing and auth gating
 - `client/src/components/app-sidebar.tsx` - Navigation sidebar
@@ -31,11 +34,12 @@ A comprehensive deal room platform that enables sales teams to create branded co
 ### Data Flow
 1. User logs in via Replit Auth → auto-creates org + owner membership
 2. Upload files to Object Storage → register in files table
-3. Create deal room → select files as assets → configure branding/access
-4. Publish room → generates share token → copy link
+3. Create deal hub → select files as assets → configure branding/access
+4. Publish hub → generates share token → copy link
 5. Prospect opens link → optional email gate/password → tracks views
 6. Prospect clicks assets → tracks clicks + duration
 7. Admin views analytics dashboard with charts
 
 ## User Preferences
-- No preferences recorded yet
+- Brand name: "Deal Hub" (not "Deal Room")
+- Landing page: Clean, professional. Focus on sharing evaluation materials. No credit card or pricing language.
