@@ -1,9 +1,38 @@
 import type { Express } from "express";
+import multer from "multer";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { isAuthenticated } from "../auth";
 
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
 export function registerObjectStorageRoutes(app: Express): void {
   const objectStorageService = new ObjectStorageService();
+
+  app.post("/api/uploads/direct", isAuthenticated, upload.single("file"), async (req: any, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const objectPath = await objectStorageService.uploadBuffer(
+        file.buffer,
+        file.mimetype || "application/octet-stream"
+      );
+
+      res.json({
+        objectPath,
+        metadata: {
+          name: file.originalname,
+          size: file.size,
+          contentType: file.mimetype || "application/octet-stream",
+        },
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
 
   app.post("/api/uploads/request-url", isAuthenticated, async (req: any, res) => {
     try {
@@ -17,13 +46,11 @@ export function registerObjectStorageRoutes(app: Express): void {
 
       const uploadURL = await objectStorageService.getObjectEntityUploadURL(contentType);
 
-      // Extract object path from the presigned URL for later reference
       const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
       res.json({
         uploadURL,
         objectPath,
-        // Echo back the metadata for client convenience
         metadata: { name, size, contentType },
       });
     } catch (error) {
@@ -32,14 +59,6 @@ export function registerObjectStorageRoutes(app: Express): void {
     }
   });
 
-  /**
-   * Serve uploaded objects.
-   *
-   * GET /objects/:objectPath(*)
-   *
-   * This serves files from object storage. For public files, no auth needed.
-   * For protected files, add authentication middleware and ACL checks.
-   */
   app.get("/objects/{*objectPath}", async (req, res) => {
     try {
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
@@ -53,4 +72,3 @@ export function registerObjectStorageRoutes(app: Express): void {
     }
   });
 }
-

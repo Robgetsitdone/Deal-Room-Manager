@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useUpload } from "@/hooks/use-upload";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,40 +49,60 @@ export default function FileLibrary() {
     queryKey: ["/api/files"],
   });
 
-  const { uploadFile, isUploading, progress } = useUpload({
-    onSuccess: async (response) => {
-      // Use the metadata echoed back from the server response
-      const fileName = response.metadata.name;
-      const fileType = response.metadata.contentType;
-      const fileSize = response.metadata.size;
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-      try {
-        await apiRequest("POST", "/api/files", {
-          fileName,
-          fileUrl: response.objectPath,
-          fileType: fileType.split("/").pop() || "unknown",
-          fileSize,
-        });
+  const uploadFile = async (file: File) => {
+    setIsUploading(true);
+    setProgress(10);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-        queryClient.invalidateQueries({ queryKey: ["/api/files"] });
-        toast({ title: "File uploaded successfully" });
-      } catch (regErr: any) {
-        toast({
-          title: "File uploaded but failed to register",
-          description: regErr.message,
-          variant: "destructive",
+      const xhr = new XMLHttpRequest();
+
+      const uploadResult = await new Promise<{ objectPath: string; metadata: { name: string; size: number; contentType: string } }>((resolve, reject) => {
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            setProgress(Math.round((e.loaded / e.total) * 80) + 10);
+          }
         });
-      }
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    },
-    onError: (err) => {
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            reject(new Error(xhr.responseText || "Upload failed"));
+          }
+        });
+        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+        xhr.open("POST", "/api/uploads/direct");
+        xhr.send(formData);
+      });
+
+      setProgress(90);
+
+      await apiRequest("POST", "/api/files", {
+        fileName: uploadResult.metadata.name,
+        fileUrl: uploadResult.objectPath,
+        fileType: (uploadResult.metadata.contentType || "application/octet-stream").split("/").pop() || "unknown",
+        fileSize: uploadResult.metadata.size,
+      });
+
+      setProgress(100);
+      queryClient.invalidateQueries({ queryKey: ["/api/files"] });
+      toast({ title: "File uploaded successfully" });
+    } catch (err: any) {
       toast({
         title: "Upload failed",
         description: err.message,
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsUploading(false);
+      setProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (fileId: string) =>
