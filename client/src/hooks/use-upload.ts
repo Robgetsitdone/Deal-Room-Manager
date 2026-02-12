@@ -89,15 +89,15 @@ export function useUpload(options: UseUploadOptions = {}) {
    */
   const uploadToPresignedUrl = useCallback(
     async (file: File, uploadURL: string): Promise<void> => {
-      // Create a clean set of headers for the PUT request
-      // GCS presigned URLs are very strict about headers matching what was signed.
-      // If the URL was signed without Content-Type, we MUST NOT send it.
-      // If the URL was signed with Content-Type, we MUST send the exact same one.
+      // GCS presigned URLs are very strict about headers.
+      // We are now explicitly signing with the Content-Type, so we MUST send it.
       const response = await fetch(uploadURL, {
         method: "PUT",
         body: file,
-        // Remove Content-Type header to avoid signature mismatch if it wasn't signed with one
-        headers: {},
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+        mode: 'cors',
       });
 
       if (!response.ok) {
@@ -187,8 +187,7 @@ export function useUpload(options: UseUploadOptions = {}) {
       return {
         method: "PUT",
         url: data.uploadURL,
-        // Remove Content-Type here as well for consistency with the signObjectURL behavior
-        headers: {},
+        headers: { "Content-Type": file.type || "application/octet-stream" },
       };
     },
     []
