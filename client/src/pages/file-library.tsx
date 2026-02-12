@@ -52,9 +52,10 @@ export default function FileLibrary() {
 
   const { uploadFile, isUploading, progress } = useUpload({
     onSuccess: async (response) => {
-      const fileName = response.metadata.name || "Uploaded file";
-      const fileType = response.metadata.contentType || "application/octet-stream";
-      const fileSize = response.metadata.size || 0;
+      // Use the metadata echoed back from the server response
+      const fileName = response.metadata.name;
+      const fileType = response.metadata.contentType;
+      const fileSize = response.metadata.size;
 
       try {
         await apiRequest("POST", "/api/files", {
