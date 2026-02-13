@@ -78,14 +78,28 @@ export default function FileLibrary() {
           }
         });
         xhr.addEventListener("load", () => {
+          if (xhr.status === 401) {
+            reject(new Error("Session expired. Please refresh the page and log in again."));
+            return;
+          }
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText));
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error("Invalid server response"));
+            }
           } else {
-            reject(new Error(xhr.responseText || "Upload failed"));
+            let msg = "Upload failed";
+            try { msg = JSON.parse(xhr.responseText)?.error || msg; } catch {}
+            reject(new Error(msg));
           }
         });
-        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+        xhr.addEventListener("error", () => reject(new Error("Network error during upload. Please check your connection.")));
+        xhr.addEventListener("abort", () => reject(new Error("Upload was cancelled")));
+        xhr.timeout = 120000;
+        xhr.addEventListener("timeout", () => reject(new Error("Upload timed out. Try a smaller file or check your connection.")));
         xhr.open("POST", "/api/uploads/direct");
+        xhr.withCredentials = true;
         xhr.send(formData);
       });
 
