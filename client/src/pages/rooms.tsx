@@ -12,15 +12,16 @@ import {
   Eye,
   Clock,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import type { DealRoom } from "@shared/schema";
 
-const statusColors: Record<string, string> = {
-  draft: "secondary",
-  published: "default",
-  expired: "outline",
-  archived: "outline",
+const statusStyles: Record<string, { variant: string; className: string }> = {
+  draft: { variant: "secondary", className: "" },
+  published: { variant: "default", className: "badge-success border" },
+  expired: { variant: "outline", className: "badge-warning border" },
+  archived: { variant: "outline", className: "" },
 };
 
 export default function Rooms() {
@@ -43,18 +44,18 @@ export default function Rooms() {
   const statuses = ["all", "draft", "published", "expired", "archived"];
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-serif font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Deal Hubs
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage your deal hubs.
+          <p className="text-muted-foreground mt-1">
+            Manage and share your deal hubs.
           </p>
         </div>
         <Link href="/rooms/new">
-          <Button data-testid="button-new-room">
+          <Button className="shadow-sm" data-testid="button-new-room">
             <Plus className="h-4 w-4 mr-2" />
             New Hub
           </Button>
@@ -72,14 +73,14 @@ export default function Rooms() {
             data-testid="input-search-rooms"
           />
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 bg-muted/50 p-1 rounded-lg">
           {statuses.map((s) => (
             <Button
               key={s}
-              variant={statusFilter === s ? "default" : "outline"}
+              variant={statusFilter === s ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setStatusFilter(s)}
-              className="capitalize"
+              className={`capitalize text-xs ${statusFilter === s ? "shadow-sm" : ""}`}
               data-testid={`button-filter-${s}`}
             >
               {s}
@@ -92,24 +93,27 @@ export default function Rooms() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="p-5">
-              <Skeleton className="h-5 w-3/4 mb-3" />
+              <Skeleton className="h-10 w-10 rounded-lg mb-3" />
+              <Skeleton className="h-5 w-3/4 mb-2" />
               <Skeleton className="h-4 w-1/2 mb-4" />
               <Skeleton className="h-6 w-20" />
             </Card>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center">
-          <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <Card className="p-12 text-center border-dashed">
+          <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="h-7 w-7 text-primary" />
+          </div>
           <h3 className="font-semibold text-lg mb-1">No deal hubs found</h3>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
             {search || statusFilter !== "all"
-              ? "Try adjusting your filters."
+              ? "Try adjusting your search or filters."
               : "Create your first deal hub to get started."}
           </p>
           {!search && statusFilter === "all" && (
             <Link href="/rooms/new">
-              <Button data-testid="button-create-first">
+              <Button className="shadow-sm" data-testid="button-create-first">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Deal Hub
               </Button>
@@ -118,65 +122,66 @@ export default function Rooms() {
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((room) => (
-            <Link key={room.id} href={`/rooms/${room.id}`}>
-              <Card
-                className="p-5 hover-elevate cursor-pointer h-full"
-                data-testid={`card-room-${room.id}`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
-                      style={{
-                        backgroundColor:
-                          (room.brandColor || "#2563EB") + "18",
-                      }}
-                    >
-                      <FolderOpen
-                        className="h-4 w-4"
+          {filtered.map((room) => {
+            const style = statusStyles[room.status] || statusStyles.draft;
+            return (
+              <Link key={room.id} href={`/rooms/${room.id}`}>
+                <Card
+                  className="p-5 cursor-pointer h-full hover:shadow-md transition-all duration-200 hover:-translate-y-[1px] group"
+                  data-testid={`card-room-${room.id}`}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div
+                        className="h-11 w-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
                         style={{
-                          color: room.brandColor || "#2563EB",
+                          backgroundColor:
+                            (room.brandColor || "#2563EB") + "12",
                         }}
-                      />
+                      >
+                        <FolderOpen
+                          className="h-5 w-5"
+                          style={{
+                            color: room.brandColor || "#2563EB",
+                          }}
+                        />
+                      </div>
+                      <Badge
+                        variant={(style.variant as any) || "secondary"}
+                        className={`capitalize flex-shrink-0 ${style.className}`}
+                      >
+                        {room.status}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant={
-                        (statusColors[room.status] as any) || "secondary"
-                      }
-                      className="capitalize flex-shrink-0"
-                    >
-                      {room.status}
-                    </Badge>
-                  </div>
 
-                  <div>
-                    <h3 className="font-semibold text-sm truncate">
-                      {room.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {room.headline || "No headline set"}
-                    </p>
-                  </div>
+                    <div>
+                      <h3 className="font-semibold truncate">
+                        {room.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+                        {room.headline || "No headline set"}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {room.createdAt
-                        ? new Date(room.createdAt).toLocaleDateString()
-                        : "—"}
-                    </span>
-                    {room.status === "published" && (
-                      <span className="flex items-center gap-1">
-                        <ExternalLink className="h-3 w-3" />
-                        Shared
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 border-t">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        {room.createdAt
+                          ? new Date(room.createdAt).toLocaleDateString()
+                          : "—"}
                       </span>
-                    )}
+                      {room.status === "published" && (
+                        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                          <ExternalLink className="h-3 w-3" />
+                          Live
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

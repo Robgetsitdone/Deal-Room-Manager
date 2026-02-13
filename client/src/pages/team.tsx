@@ -20,25 +20,14 @@ interface TeamMember extends OrganizationMember {
   user: UserType;
 }
 
-const roleIcon = (role: string) => {
+const roleConfig = (role: string) => {
   switch (role) {
     case "owner":
-      return Crown;
+      return { icon: Crown, color: "text-amber-500", bg: "bg-amber-500/10", variant: "default" as const };
     case "admin":
-      return Shield;
+      return { icon: Shield, color: "text-blue-500", bg: "bg-blue-500/10", variant: "secondary" as const };
     default:
-      return User;
-  }
-};
-
-const roleColor = (role: string) => {
-  switch (role) {
-    case "owner":
-      return "default";
-    case "admin":
-      return "secondary";
-    default:
-      return "outline";
+      return { icon: User, color: "text-muted-foreground", bg: "bg-muted", variant: "outline" as const };
   }
 };
 
@@ -66,13 +55,13 @@ export default function Team() {
   });
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-6 max-w-4xl mx-auto page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-serif font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Team
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-muted-foreground mt-1">
             Manage your team members and roles.
           </p>
         </div>
@@ -81,28 +70,33 @@ export default function Team() {
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="p-4">
+            <Card key={i} className="p-5">
               <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-1.5 flex-1">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-11 w-11 rounded-full" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-48" />
                 </div>
+                <Skeleton className="h-9 w-24" />
               </div>
             </Card>
           ))}
         </div>
       ) : !members || members.length === 0 ? (
-        <Card className="p-8 text-center">
-          <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+        <Card className="p-12 text-center border-dashed">
+          <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Users className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="font-semibold text-lg mb-1">No team members</h3>
           <p className="text-sm text-muted-foreground">
-            No team members found.
+            Team members will appear here once they join.
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {members.map((member) => {
-            const Icon = roleIcon(member.role);
+            const config = roleConfig(member.role);
+            const Icon = config.icon;
             const initials = member.user
               ? `${(member.user.firstName || "")[0] || ""}${(member.user.lastName || "")[0] || ""}`.toUpperCase() || "U"
               : "U";
@@ -110,21 +104,21 @@ export default function Team() {
             return (
               <Card
                 key={member.id}
-                className="p-4"
+                className="p-4 hover:shadow-sm transition-shadow"
                 data-testid={`member-${member.id}`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-11 w-11 shadow-sm">
                       <AvatarImage
                         src={member.user?.profileImageUrl || undefined}
                       />
-                      <AvatarFallback className="text-xs">
+                      <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <p className="text-sm font-semibold truncate">
                         {member.user?.firstName} {member.user?.lastName}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
@@ -135,7 +129,7 @@ export default function Team() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {member.role === "owner" ? (
                       <Badge
-                        variant={roleColor(member.role) as any}
+                        variant={config.variant}
                         className="capitalize"
                       >
                         <Icon className="h-3 w-3 mr-1" />

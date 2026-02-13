@@ -12,7 +12,6 @@ import {
   FileText,
   Download,
   Lock,
-  Mail,
   Eye,
   ExternalLink,
   MessageSquare,
@@ -193,9 +192,14 @@ export default function PublicRoom() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="space-y-4 w-full max-w-md px-6">
-          <Skeleton className="h-10 w-10 rounded-md" />
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-12 w-12 rounded-lg" />
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-64" />
+          <div className="space-y-3 pt-4">
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-16 w-full rounded-lg" />
+          </div>
         </div>
       </div>
     );
@@ -204,35 +208,52 @@ export default function PublicRoom() {
   if (error || !room) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center px-6">
-          <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h1 className="text-xl font-semibold mb-2">Hub Not Available</h1>
+        <Card className="max-w-md mx-6 p-10 text-center">
+          <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+            <FolderOpen className="h-7 w-7 text-primary" />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight mb-2">Hub Not Available</h1>
           <p className="text-sm text-muted-foreground">
             This deal hub may have expired or doesn't exist.
           </p>
-        </div>
+        </Card>
       </div>
     );
   }
 
   const brandColor = room.brandColor || "#2563EB";
 
+  // Gate screen
   if (!unlocked && (room.requireEmail || room.hasPassword)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md mx-6 p-6 space-y-5">
+        <div className="absolute top-0 left-0 right-0 h-1.5" style={{ backgroundColor: brandColor }} />
+        <Card className="w-full max-w-md mx-6 p-7 space-y-5">
           <div className="flex items-center gap-3">
             <div
-              className="h-10 w-10 rounded-md flex items-center justify-center"
-              style={{ backgroundColor: brandColor + "20" }}
+              className="h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+              style={{ backgroundColor: brandColor + "18" }}
             >
-              <FolderOpen className="h-5 w-5" style={{ color: brandColor }} />
+              <FolderOpen className="h-6 w-6" style={{ color: brandColor }} />
             </div>
             <div>
-              <h1 className="font-semibold text-lg">
+              <h1 className="font-bold text-lg tracking-tight">
                 {room.headline || room.name}
               </h1>
+              {room.welcomeMessage && (
+                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                  {room.welcomeMessage}
+                </p>
+              )}
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 py-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground font-medium px-2">
+              {room.hasPassword ? "Enter credentials to continue" : "Enter your details"}
+            </span>
+            <div className="h-px flex-1 bg-border" />
           </div>
 
           {room.requireEmail && (
@@ -273,7 +294,10 @@ export default function PublicRoom() {
 
           {room.hasPassword && (
             <div className="space-y-2">
-              <Label htmlFor="gate-password">Password</Label>
+              <Label htmlFor="gate-password" className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                Password
+              </Label>
               <Input
                 id="gate-password"
                 type="password"
@@ -286,7 +310,7 @@ export default function PublicRoom() {
           )}
 
           <Button
-            className="w-full"
+            className="w-full h-11 font-semibold shadow-sm"
             onClick={handleUnlock}
             disabled={
               (room.requireEmail && !email) || verifyMutation.isPending
@@ -321,30 +345,32 @@ export default function PublicRoom() {
 
       <div className="flex min-h-[calc(100vh-0.375rem)]">
         {/* Main Content */}
-        <div className={`flex-1 transition-all ${showComments ? "mr-0" : ""}`}>
-          <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
-            <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <div className="max-w-3xl mx-auto px-6 py-10 space-y-8 page-enter">
+            {/* Header */}
+            <div className="flex items-start gap-4">
               <div
-                className="h-12 w-12 rounded-md flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: brandColor + "20" }}
+                className="h-13 w-13 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                style={{ backgroundColor: brandColor + "15" }}
               >
                 <FolderOpen className="h-6 w-6" style={{ color: brandColor }} />
               </div>
               <div>
-                <h1 className="text-2xl font-serif font-bold tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                   {room.headline || room.name}
                 </h1>
                 {room.welcomeMessage && (
-                  <p className="text-muted-foreground text-sm mt-1">
+                  <p className="text-muted-foreground mt-1.5 leading-relaxed">
                     {room.welcomeMessage}
                   </p>
                 )}
               </div>
             </div>
 
+            {/* Sectioned Assets */}
             {sections.map((section) => (
               <div key={section} className="space-y-3">
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                   {section}
                 </h2>
                 {room.assets
@@ -362,10 +388,11 @@ export default function PublicRoom() {
               </div>
             ))}
 
+            {/* Unsectioned Assets */}
             {unsectioned.length > 0 && (
               <div className="space-y-3">
                 {sections.length > 0 && (
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                     Files
                   </h2>
                 )}
@@ -383,9 +410,10 @@ export default function PublicRoom() {
               </div>
             )}
 
-            <div className="pt-6 border-t text-center">
+            {/* Footer */}
+            <div className="pt-8 border-t text-center">
               <p className="text-xs text-muted-foreground">
-                Powered by DealBuddy
+                Powered by <span className="font-semibold">DealBuddy</span>
               </p>
             </div>
           </div>
@@ -394,8 +422,8 @@ export default function PublicRoom() {
         {/* Comments Toggle Button */}
         <button
           onClick={() => setShowComments(!showComments)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-card border border-r-0 rounded-l-md p-2 shadow-sm"
-          style={{ right: showComments ? "360px" : "0px", transition: "right 0.2s" }}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-card border border-r-0 rounded-l-lg p-2.5 shadow-md hover:shadow-lg transition-shadow"
+          style={{ right: showComments ? "360px" : "0px", transition: "right 0.2s ease" }}
           data-testid="button-toggle-comments"
         >
           {showComments ? (
@@ -410,11 +438,13 @@ export default function PublicRoom() {
 
         {/* Comments Panel */}
         <div
-          className={`fixed right-0 top-[0.375rem] bottom-0 w-[360px] border-l bg-card flex flex-col transition-transform z-20 ${showComments ? "translate-x-0" : "translate-x-full"}`}
+          className={`fixed right-0 top-[0.375rem] bottom-0 w-[360px] border-l bg-card flex flex-col transition-transform duration-200 z-20 ${showComments ? "translate-x-0" : "translate-x-full"}`}
           data-testid="panel-comments"
         >
-          <div className="p-4 border-b flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" style={{ color: brandColor }} />
+          <div className="p-4 border-b flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center" style={{ backgroundColor: brandColor + "15" }}>
+              <MessageSquare className="h-3.5 w-3.5" style={{ color: brandColor }} />
+            </div>
             <h2 className="font-semibold text-sm">Comments & Notes</h2>
             {comments && comments.length > 0 && (
               <Badge variant="secondary" className="text-xs ml-auto">
@@ -423,28 +453,30 @@ export default function PublicRoom() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {(!comments || comments.length === 0) ? (
-              <div className="text-center py-8">
-                <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <div className="text-center py-10">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                </div>
                 <p className="text-sm text-muted-foreground">
                   No comments yet. Be the first to leave a note.
                 </p>
               </div>
             ) : (
               comments.map((comment) => (
-                <div key={comment.id} className="space-y-1" data-testid={`public-comment-${comment.id}`}>
+                <div key={comment.id} className="space-y-1.5" data-testid={`public-comment-${comment.id}`}>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${comment.authorRole === "seller" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${comment.authorRole === "seller" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                       {comment.authorName.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-sm font-medium">{comment.authorName}</span>
-                    <Badge variant={comment.authorRole === "seller" ? "default" : "secondary"} className="text-xs">
+                    <span className="text-sm font-semibold">{comment.authorName}</span>
+                    <Badge variant={comment.authorRole === "seller" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
                       {comment.authorRole === "seller" ? "Team" : "Prospect"}
                     </Badge>
                   </div>
-                  <p className="text-sm pl-8 whitespace-pre-wrap">{comment.message}</p>
-                  <p className="text-xs text-muted-foreground pl-8">
+                  <p className="text-sm pl-9 whitespace-pre-wrap leading-relaxed">{comment.message}</p>
+                  <p className="text-xs text-muted-foreground pl-9">
                     {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ""}
                   </p>
                 </div>
@@ -474,35 +506,33 @@ export default function PublicRoom() {
             )}
             {commentName && (
               <div className="flex items-center gap-2">
-                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium flex-shrink-0">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs font-semibold flex-shrink-0">
                   {commentName.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-sm text-muted-foreground">{commentName}</span>
                 <button
-                  className="text-xs text-muted-foreground underline ml-auto"
+                  className="text-xs text-muted-foreground hover:text-foreground underline ml-auto transition-colors"
                   onClick={() => setCommentName("")}
                 >
                   change
                 </button>
               </div>
             )}
-            <div className="flex gap-2">
-              <Textarea
-                value={commentMessage}
-                onChange={(e) => setCommentMessage(e.target.value)}
-                placeholder="Write a comment..."
-                className="resize-none text-sm flex-1"
-                rows={2}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                    handlePostComment();
-                  }
-                }}
-                data-testid="input-comment-message"
-              />
-            </div>
+            <Textarea
+              value={commentMessage}
+              onChange={(e) => setCommentMessage(e.target.value)}
+              placeholder="Write a comment..."
+              className="resize-none text-sm"
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  handlePostComment();
+                }
+              }}
+              data-testid="input-comment-message"
+            />
             <Button
-              className="w-full"
+              className="w-full font-medium shadow-sm"
               size="sm"
               onClick={handlePostComment}
               disabled={!commentName.trim() || !commentMessage.trim() || postCommentMutation.isPending}
@@ -532,37 +562,36 @@ function PublicAssetCard({
 }) {
   return (
     <Card
-      className="p-4 hover-elevate cursor-pointer"
+      className="p-4 cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-[1px] group"
       onClick={onClick}
       data-testid={`public-asset-${asset.id}`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         <div
-          className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold"
+          className="h-11 w-11 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold transition-transform group-hover:scale-105"
           style={{
-            backgroundColor: brandColor + "15",
+            backgroundColor: brandColor + "12",
             color: brandColor,
           }}
         >
           {asset.file.fileType.toUpperCase().slice(0, 4)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{asset.title}</p>
+          <p className="font-medium text-sm truncate group-hover:text-foreground transition-colors">{asset.title}</p>
           {asset.description && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">
               {asset.description}
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-0.5">
-            {asset.file.fileType.toUpperCase()} ·{" "}
-            {(asset.file.fileSize / 1024).toFixed(1)} KB
+            {asset.file.fileType.toUpperCase()} · {(asset.file.fileSize / 1024).toFixed(1)} KB
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
           {allowDownload ? (
-            <Download className="h-4 w-4 text-muted-foreground" />
+            <Download className="h-4.5 w-4.5 text-muted-foreground" />
           ) : (
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            <ExternalLink className="h-4.5 w-4.5 text-muted-foreground" />
           )}
         </div>
       </div>

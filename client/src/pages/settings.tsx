@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings as SettingsIcon, Save } from "lucide-react";
+import { Settings as SettingsIcon, Save, Building2, Palette } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Organization } from "@shared/schema";
 
@@ -44,32 +44,38 @@ export default function Settings() {
   });
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-6 max-w-2xl mx-auto page-enter">
       <div>
-        <h1 className="text-2xl font-serif font-bold tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
           Settings
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
+        <p className="text-muted-foreground mt-1">
           Manage your organization settings.
         </p>
       </div>
 
       {isLoading ? (
-        <Card className="p-6 space-y-4">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-9 w-32" />
+        <Card className="p-6 space-y-5">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-28" />
         </Card>
       ) : (
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <SettingsIcon className="h-4 w-4 text-muted-foreground" />
-            <h2 className="font-semibold text-sm">Organization</h2>
+        <Card className="p-6 space-y-6">
+          <div className="flex items-center gap-2.5 pb-3 border-b">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <SettingsIcon className="h-4 w-4 text-primary" />
+            </div>
+            <h2 className="font-semibold">Organization</h2>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="orgName">Organization Name</Label>
+            <Label htmlFor="orgName" className="flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              Organization Name
+            </Label>
             <Input
               id="orgName"
               value={name}
@@ -79,20 +85,27 @@ export default function Settings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="orgBrandColor">Default Brand Color</Label>
+            <Label htmlFor="orgBrandColor" className="flex items-center gap-1.5">
+              <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+              Default Brand Color
+            </Label>
             <div className="flex items-center gap-3">
               <input
                 type="color"
                 id="orgBrandColor"
                 value={brandColor}
                 onChange={(e) => setBrandColor(e.target.value)}
-                className="h-9 w-12 rounded-md border cursor-pointer"
+                className="h-10 w-14 rounded-lg border cursor-pointer"
                 data-testid="input-org-brand-color"
               />
               <Input
                 value={brandColor}
                 onChange={(e) => setBrandColor(e.target.value)}
-                className="max-w-[120px]"
+                className="max-w-[120px] font-mono text-sm"
+              />
+              <div
+                className="h-10 flex-1 rounded-lg border"
+                style={{ backgroundColor: brandColor + "15" }}
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -100,14 +113,17 @@ export default function Settings() {
             </p>
           </div>
 
-          <Button
-            onClick={() => updateMutation.mutate()}
-            disabled={updateMutation.isPending}
-            data-testid="button-save-settings"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {updateMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
+          <div className="pt-2">
+            <Button
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending}
+              className="shadow-sm"
+              data-testid="button-save-settings"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </Card>
       )}
     </div>

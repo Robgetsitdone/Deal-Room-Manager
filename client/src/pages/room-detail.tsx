@@ -32,6 +32,7 @@ import {
   Link as LinkIcon,
   Settings,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import type {
   DealRoom,
@@ -40,13 +41,20 @@ import type {
   DealRoomComment,
   File as FileRecord,
 } from "@shared/schema";
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 
 interface RoomDetailData extends DealRoom {
   assets: (DealRoomAsset & { file: FileRecord })[];
   views: DealRoomView[];
   totalClicks: number;
 }
+
+const statusStyles: Record<string, { variant: string; className: string }> = {
+  draft: { variant: "secondary", className: "" },
+  published: { variant: "default", className: "badge-success border" },
+  expired: { variant: "outline", className: "badge-warning border" },
+  archived: { variant: "outline", className: "" },
+};
 
 export default function RoomDetail() {
   const [, params] = useRoute("/rooms/:id");
@@ -257,60 +265,79 @@ export default function RoomDetail() {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Skeleton className="h-64 w-full" />
+      <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-32" />
           </div>
-          <Skeleton className="h-64 w-full" />
         </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="p-5">
+              <Skeleton className="h-4 w-24 mb-3" />
+              <Skeleton className="h-8 w-16" />
+            </Card>
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   if (!room) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-muted-foreground">Deal hub not found.</p>
+      <div className="p-6 lg:p-8 max-w-6xl mx-auto page-enter">
+        <Card className="p-12 text-center border-dashed">
+          <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="font-semibold text-lg mb-1">Deal hub not found</h3>
+          <p className="text-sm text-muted-foreground mb-5">
+            This hub may have been deleted or doesn't exist.
+          </p>
+          <Button variant="outline" onClick={() => navigate("/rooms")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Hubs
+          </Button>
+        </Card>
       </div>
     );
   }
 
+  const style = statusStyles[room.status] || statusStyles.draft;
   const shareLink = `${window.location.origin}/r/${room.shareToken}`;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6 page-enter">
+      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
+            className="h-9 w-9"
             onClick={() => navigate("/rooms")}
             data-testid="button-back"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-serif font-bold tracking-tight">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                 {room.name}
               </h1>
               <Badge
-                variant={
-                  room.status === "published"
-                    ? "default"
-                    : room.status === "draft"
-                      ? "secondary"
-                      : "outline"
-                }
-                className="capitalize"
+                variant={(style.variant as any) || "secondary"}
+                className={`capitalize ${style.className}`}
+                data-testid="badge-status"
               >
                 {room.status}
               </Badge>
             </div>
             {room.headline && (
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-muted-foreground mt-0.5">
                 {room.headline}
               </p>
             )}
@@ -322,6 +349,7 @@ export default function RoomDetail() {
             <Button
               onClick={() => publishMutation.mutate()}
               disabled={publishMutation.isPending}
+              className="shadow-sm"
               data-testid="button-publish"
             >
               <Send className="h-4 w-4 mr-2" />
@@ -343,6 +371,7 @@ export default function RoomDetail() {
           <Button
             variant="ghost"
             size="icon"
+            className="h-9 w-9"
             onClick={startEditingSettings}
             data-testid="button-edit-settings"
           >
@@ -351,6 +380,7 @@ export default function RoomDetail() {
           <Button
             variant="ghost"
             size="icon"
+            className="h-9 w-9"
             onClick={() => archiveMutation.mutate()}
             disabled={archiveMutation.isPending}
             data-testid="button-archive"
@@ -360,6 +390,7 @@ export default function RoomDetail() {
           <Button
             variant="ghost"
             size="icon"
+            className="h-9 w-9 text-muted-foreground hover:text-destructive"
             onClick={() => {
               if (confirm("Are you sure you want to delete this deal hub?")) {
                 deleteMutation.mutate();
@@ -373,12 +404,14 @@ export default function RoomDetail() {
         </div>
       </div>
 
-      {/* Share Link Card - always visible */}
+      {/* Share Link Card */}
       <Card className="p-4">
         <div className="flex items-center gap-3">
-          <LinkIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <LinkIcon className="h-4 w-4 text-primary" />
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground mb-0.5">Share Link</p>
+            <p className="text-xs text-muted-foreground font-medium mb-0.5">Share Link</p>
             <p className="text-sm font-mono truncate" data-testid="text-share-link">
               {shareLink}
             </p>
@@ -395,7 +428,7 @@ export default function RoomDetail() {
           </a>
         </div>
         {room.status === "draft" && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 ml-7">
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2.5 ml-12">
             This hub is still in draft. Publish it to make the share link active for your prospects.
           </p>
         )}
@@ -403,12 +436,13 @@ export default function RoomDetail() {
 
       {/* Settings Editor */}
       {editingSettings && (
-        <Card className="p-5 space-y-4">
+        <Card className="p-6 space-y-5">
           <div className="flex items-center justify-between gap-4">
-            <h3 className="font-semibold">Edit Hub Settings</h3>
+            <h3 className="font-semibold text-lg">Edit Hub Settings</h3>
             <Button
               variant="ghost"
               size="icon"
+              className="h-8 w-8"
               onClick={() => setEditingSettings(false)}
             >
               <X className="h-4 w-4" />
@@ -453,13 +487,13 @@ export default function RoomDetail() {
                   type="color"
                   value={settingsForm.brandColor}
                   onChange={(e) => setSettingsForm({ ...settingsForm, brandColor: e.target.value })}
-                  className="h-9 w-12 rounded-md border cursor-pointer"
+                  className="h-10 w-14 rounded-lg border cursor-pointer"
                   data-testid="input-edit-color"
                 />
                 <Input
                   value={settingsForm.brandColor}
                   onChange={(e) => setSettingsForm({ ...settingsForm, brandColor: e.target.value })}
-                  className="max-w-[120px]"
+                  className="max-w-[120px] font-mono text-sm"
                 />
               </div>
             </div>
@@ -475,9 +509,9 @@ export default function RoomDetail() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30">
             <div>
-              <Label>Require Email to View</Label>
+              <Label className="text-sm font-medium">Require Email to View</Label>
               <p className="text-xs text-muted-foreground">Prospects must enter their email first.</p>
             </div>
             <Switch
@@ -487,9 +521,9 @@ export default function RoomDetail() {
             />
           </div>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30">
             <div>
-              <Label>Allow Downloads</Label>
+              <Label className="text-sm font-medium">Allow Downloads</Label>
               <p className="text-xs text-muted-foreground">Prospects can download files.</p>
             </div>
             <Switch
@@ -499,13 +533,14 @@ export default function RoomDetail() {
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setEditingSettings(false)}>
               Cancel
             </Button>
             <Button
               onClick={() => updateSettingsMutation.mutate(settingsForm)}
               disabled={updateSettingsMutation.isPending}
+              className="shadow-sm"
               data-testid="button-save-settings"
             >
               {updateSettingsMutation.isPending ? "Saving..." : "Save Settings"}
@@ -516,35 +551,26 @@ export default function RoomDetail() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 space-y-1">
-          <div className="flex items-center justify-between gap-1">
-            <p className="text-sm text-muted-foreground">Total Views</p>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+        {[
+          { key: "views", label: "Total Views", value: room.views?.length || 0, icon: Eye, color: "text-purple-500", bg: "bg-purple-500/10" },
+          { key: "clicks", label: "Total Clicks", value: room.totalClicks || 0, icon: MousePointerClick, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+          { key: "assets", label: "Assets", value: room.assets?.length || 0, icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+        ].map((stat) => (
+          <div key={stat.key} className="stat-card">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+              <div className={`h-8 w-8 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </div>
+            </div>
+            <p className="text-3xl font-bold mt-2 tracking-tight" data-testid={`text-room-${stat.key}`}>
+              {stat.value}
+            </p>
           </div>
-          <p className="text-2xl font-bold" data-testid="text-room-views">
-            {room.views?.length || 0}
-          </p>
-        </Card>
-        <Card className="p-4 space-y-1">
-          <div className="flex items-center justify-between gap-1">
-            <p className="text-sm text-muted-foreground">Total Clicks</p>
-            <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold" data-testid="text-room-clicks">
-            {room.totalClicks || 0}
-          </p>
-        </Card>
-        <Card className="p-4 space-y-1">
-          <div className="flex items-center justify-between gap-1">
-            <p className="text-sm text-muted-foreground">Assets</p>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold" data-testid="text-room-assets">
-            {room.assets?.length || 0}
-          </p>
-        </Card>
+        ))}
       </div>
 
+      {/* Tabs */}
       <Tabs defaultValue="assets">
         <TabsList>
           <TabsTrigger value="assets" data-testid="tab-assets">
@@ -560,10 +586,13 @@ export default function RoomDetail() {
 
         <TabsContent value="assets" className="mt-4 space-y-4">
           {sortedAssets.length === 0 ? (
-            <Card className="p-8 text-center">
-              <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground mb-3">
-                No assets in this hub yet. Add files from your library.
+            <Card className="p-10 text-center border-dashed">
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-1">No assets yet</h3>
+              <p className="text-sm text-muted-foreground">
+                Add files from your library to this hub.
               </p>
             </Card>
           ) : (
@@ -582,7 +611,7 @@ export default function RoomDetail() {
                   className={`transition-opacity ${draggedIndex === index ? "opacity-40" : ""} ${dragOverIndex === index && draggedIndex !== index ? "border-t-2 border-primary" : ""}`}
                 >
                   {editingAssetId === asset.id ? (
-                    <Card className="p-4 space-y-3" data-testid={`asset-edit-${asset.id}`}>
+                    <Card className="p-5 space-y-3" data-testid={`asset-edit-${asset.id}`}>
                       <div className="space-y-2">
                         <Label>Title</Label>
                         <Input
@@ -619,6 +648,7 @@ export default function RoomDetail() {
                         </Button>
                         <Button
                           size="sm"
+                          className="shadow-sm"
                           onClick={saveAssetEdit}
                           disabled={updateAssetMutation.isPending}
                           data-testid="button-save-asset"
@@ -629,12 +659,18 @@ export default function RoomDetail() {
                       </div>
                     </Card>
                   ) : (
-                    <Card className="p-4" data-testid={`asset-${asset.id}`}>
+                    <Card className="p-4 hover:shadow-sm transition-shadow" data-testid={`asset-${asset.id}`}>
                       <div className="flex items-center gap-3">
-                        <div className="cursor-grab active:cursor-grabbing flex-shrink-0 text-muted-foreground">
+                        <div className="cursor-grab active:cursor-grabbing flex-shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors">
                           <GripVertical className="h-4 w-4" />
                         </div>
-                        <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground flex-shrink-0">
+                        <div
+                          className="h-10 w-10 rounded-lg flex items-center justify-center text-xs font-semibold flex-shrink-0"
+                          style={{
+                            backgroundColor: (room.brandColor || "#2563EB") + "12",
+                            color: room.brandColor || "#2563EB",
+                          }}
+                        >
                           {asset.file.fileType.toUpperCase().slice(0, 4)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -646,7 +682,7 @@ export default function RoomDetail() {
                           )}
                           <div className="flex items-center gap-2 mt-0.5">
                             {asset.section && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                                 {asset.section}
                               </Badge>
                             )}
@@ -655,10 +691,11 @@ export default function RoomDetail() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => moveAsset(index, "up")}
                             disabled={index === 0}
                             data-testid={`button-move-up-${asset.id}`}
@@ -668,6 +705,7 @@ export default function RoomDetail() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => moveAsset(index, "down")}
                             disabled={index === sortedAssets.length - 1}
                             data-testid={`button-move-down-${asset.id}`}
@@ -677,18 +715,20 @@ export default function RoomDetail() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8"
                             onClick={() => startEditingAsset(asset)}
                             data-testid={`button-edit-asset-${asset.id}`}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => deleteAssetMutation.mutate(asset.id)}
                             data-testid={`button-delete-asset-${asset.id}`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -701,13 +741,13 @@ export default function RoomDetail() {
 
           {/* Add files from library */}
           {availableFiles.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2">
               <p className="text-sm font-medium text-muted-foreground">Add files from library</p>
               <div className="grid gap-2">
                 {availableFiles.slice(0, 5).map((file) => (
                   <Card
                     key={file.id}
-                    className="p-3 hover-elevate cursor-pointer"
+                    className="p-3.5 cursor-pointer hover:shadow-sm hover:bg-muted/30 transition-all"
                     onClick={() =>
                       addAssetMutation.mutate({
                         fileId: file.id,
@@ -718,8 +758,10 @@ export default function RoomDetail() {
                     data-testid={`add-file-${file.id}`}
                   >
                     <div className="flex items-center gap-3">
-                      <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground flex-shrink-0">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <Plus className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0">
                         {file.fileType.toUpperCase().slice(0, 4)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -732,7 +774,7 @@ export default function RoomDetail() {
                   </Card>
                 ))}
                 {availableFiles.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center">
+                  <p className="text-xs text-muted-foreground text-center py-1">
                     + {availableFiles.length - 5} more files in library
                   </p>
                 )}
@@ -742,7 +784,7 @@ export default function RoomDetail() {
         </TabsContent>
 
         <TabsContent value="comments" className="mt-4 space-y-4">
-          <Card className="p-4 space-y-3">
+          <Card className="p-5 space-y-3">
             <Textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
@@ -754,6 +796,7 @@ export default function RoomDetail() {
             <div className="flex justify-end">
               <Button
                 size="sm"
+                className="shadow-sm"
                 onClick={() => {
                   if (newComment.trim()) commentMutation.mutate(newComment.trim());
                 }}
@@ -767,31 +810,33 @@ export default function RoomDetail() {
           </Card>
 
           {(!comments || comments.length === 0) ? (
-            <Card className="p-8 text-center">
-              <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
+            <Card className="p-10 text-center border-dashed">
+              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                 No comments yet. Post a note for your prospect or they can leave comments on the share page.
               </p>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {comments.map((comment) => (
                 <Card key={comment.id} className="p-4" data-testid={`comment-${comment.id}`}>
                   <div className="flex items-start gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium ${comment.authorRole === "seller" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold ${comment.authorRole === "seller" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                       {comment.authorName.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{comment.authorName}</span>
-                        <Badge variant={comment.authorRole === "seller" ? "default" : "secondary"} className="text-xs">
+                        <span className="text-sm font-semibold">{comment.authorName}</span>
+                        <Badge variant={comment.authorRole === "seller" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
                           {comment.authorRole === "seller" ? "Team" : "Prospect"}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ""}
                         </span>
                       </div>
-                      <p className="text-sm mt-1 whitespace-pre-wrap">{comment.message}</p>
+                      <p className="text-sm mt-1.5 whitespace-pre-wrap leading-relaxed">{comment.message}</p>
                     </div>
                   </div>
                 </Card>
@@ -800,10 +845,12 @@ export default function RoomDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="viewers" className="mt-4 space-y-3">
+        <TabsContent value="viewers" className="mt-4 space-y-2">
           {(!room.views || room.views.length === 0) ? (
-            <Card className="p-8 text-center">
-              <Eye className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <Card className="p-10 text-center border-dashed">
+              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                <Eye className="h-6 w-6 text-muted-foreground" />
+              </div>
               <p className="text-sm text-muted-foreground">
                 No viewers yet. Share your hub to start tracking.
               </p>
@@ -817,7 +864,7 @@ export default function RoomDetail() {
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Eye className="h-4 w-4 text-primary" />
                     </div>
                     <div className="min-w-0">
@@ -829,20 +876,22 @@ export default function RoomDetail() {
                           <span>{view.viewerCompany}</span>
                         )}
                         {view.device && (
-                          <span className="capitalize">{view.device}</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">
+                            {view.device}
+                          </Badge>
                         )}
                       </div>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Clock className="h-3 w-3" />
                       {view.viewedAt
                         ? new Date(view.viewedAt).toLocaleString()
                         : ""}
                     </p>
                     {view.duration != null && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {Math.round(view.duration / 60)}m {view.duration % 60}s
                       </p>
                     )}

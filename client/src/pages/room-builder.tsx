@@ -17,18 +17,18 @@ import {
   Palette,
   Shield,
   Check,
-  Plus,
   X,
+  Sparkles,
 } from "lucide-react";
 import type { File as FileRecord } from "@shared/schema";
 
 type Step = "basics" | "files" | "branding" | "access";
 
-const steps: { key: Step; label: string; icon: any }[] = [
-  { key: "basics", label: "Basics", icon: FolderOpen },
-  { key: "files", label: "Files", icon: FileText },
-  { key: "branding", label: "Branding", icon: Palette },
-  { key: "access", label: "Access", icon: Shield },
+const steps: { key: Step; label: string; icon: any; color: string; bg: string }[] = [
+  { key: "basics", label: "Basics", icon: FolderOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
+  { key: "files", label: "Files", icon: FileText, color: "text-purple-500", bg: "bg-purple-500/10" },
+  { key: "branding", label: "Branding", icon: Palette, color: "text-amber-500", bg: "bg-amber-500/10" },
+  { key: "access", label: "Access", icon: Shield, color: "text-emerald-500", bg: "bg-emerald-500/10" },
 ];
 
 export default function RoomBuilder() {
@@ -111,44 +111,66 @@ export default function RoomBuilder() {
   const canSubmit = name.trim().length > 0;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6 page-enter">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate("/rooms")}
+          className="h-9 w-9"
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-serif font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Create Deal Hub
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-muted-foreground mt-0.5">
             Set up a new deal hub for your prospect.
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {steps.map((step, i) => (
-          <button
-            key={step.key}
-            onClick={() => setCurrentStep(step.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-              currentStep === step.key
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover-elevate"
-            }`}
-            data-testid={`step-${step.key}`}
-          >
-            <step.icon className="h-4 w-4" />
-            {step.label}
-          </button>
-        ))}
+      {/* Step Indicator */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {steps.map((step, i) => {
+          const isActive = currentStep === step.key;
+          const isCompleted = i < currentStepIndex;
+          return (
+            <button
+              key={step.key}
+              onClick={() => setCurrentStep(step.key)}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap border ${
+                isActive
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : isCompleted
+                    ? "bg-card text-foreground border-border hover:shadow-sm"
+                    : "bg-card text-muted-foreground border-border/50 hover:border-border"
+              }`}
+              data-testid={`step-${step.key}`}
+            >
+              <div className={`h-6 w-6 rounded-md flex items-center justify-center ${
+                isActive
+                  ? "bg-primary-foreground/20"
+                  : isCompleted
+                    ? "bg-emerald-500/10"
+                    : step.bg
+              }`}>
+                {isCompleted ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                ) : (
+                  <step.icon className={`h-3.5 w-3.5 ${isActive ? "text-primary-foreground" : step.color}`} />
+                )}
+              </div>
+              {step.label}
+            </button>
+          );
+        })}
       </div>
 
+      {/* Step Content */}
       <Card className="p-6">
         {currentStep === "basics" && (
           <div className="space-y-5">
@@ -195,20 +217,21 @@ export default function RoomBuilder() {
 
         {currentStep === "files" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold">Add Files</h3>
-                <p className="text-sm text-muted-foreground">
-                  Select files from your library to include in this hub.
-                </p>
-              </div>
+            <div>
+              <h3 className="font-semibold text-lg">Add Files</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Select files from your library to include in this hub.
+              </p>
             </div>
 
             {!libraryFiles || libraryFiles.length === 0 ? (
-              <div className="py-8 text-center">
-                <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground mb-3">
-                  No files in your library yet. Upload files first.
+              <Card className="p-10 text-center border-dashed">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-1">No files yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload files to your library first.
                 </p>
                 <Button
                   variant="outline"
@@ -217,7 +240,7 @@ export default function RoomBuilder() {
                 >
                   Go to File Library
                 </Button>
-              </div>
+              </Card>
             ) : (
               <div className="space-y-2">
                 {libraryFiles.map((file) => {
@@ -225,16 +248,16 @@ export default function RoomBuilder() {
                   return (
                     <div
                       key={file.id}
-                      className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                      className={`flex items-center gap-3 p-3.5 rounded-lg border cursor-pointer transition-all duration-200 ${
                         isSelected
-                          ? "border-primary bg-primary/5"
-                          : "hover-elevate"
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "hover:bg-muted/50 hover:border-border"
                       }`}
                       onClick={() => toggleFile(file.id)}
                       data-testid={`file-select-${file.id}`}
                     >
                       <div
-                        className={`h-8 w-8 rounded-md flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center text-xs font-semibold flex-shrink-0 transition-colors ${
                           isSelected
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted text-muted-foreground"
@@ -251,8 +274,7 @@ export default function RoomBuilder() {
                           {file.fileName}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {(file.fileSize / 1024).toFixed(1)} KB ·{" "}
-                          {file.fileType}
+                          {(file.fileSize / 1024).toFixed(1)} KB · {file.fileType}
                         </p>
                       </div>
                     </div>
@@ -262,8 +284,8 @@ export default function RoomBuilder() {
             )}
 
             {selectedFileIds.length > 0 && (
-              <div className="space-y-3 pt-4 border-t">
-                <h4 className="font-medium text-sm">
+              <div className="space-y-3 pt-5 border-t">
+                <h4 className="font-semibold text-sm">
                   Configure Selected Files ({selectedFileIds.length})
                 </h4>
                 {selectedFileIds.map((fileId) => {
@@ -277,6 +299,7 @@ export default function RoomBuilder() {
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-7 w-7"
                           onClick={() => toggleFile(fileId)}
                         >
                           <X className="h-3.5 w-3.5" />
@@ -333,23 +356,23 @@ export default function RoomBuilder() {
                   id="brandColor"
                   value={brandColor}
                   onChange={(e) => setBrandColor(e.target.value)}
-                  className="h-9 w-12 rounded-md border cursor-pointer"
+                  className="h-10 w-14 rounded-lg border cursor-pointer"
                   data-testid="input-brand-color"
                 />
                 <Input
                   value={brandColor}
                   onChange={(e) => setBrandColor(e.target.value)}
-                  className="max-w-[120px]"
+                  className="max-w-[120px] font-mono text-sm"
                 />
               </div>
             </div>
 
             <div className="pt-4">
-              <h4 className="font-medium text-sm mb-3">Preview</h4>
-              <Card className="p-6 space-y-4">
+              <h4 className="font-semibold text-sm mb-3">Preview</h4>
+              <Card className="p-6 space-y-4 overflow-hidden">
                 <div className="flex items-center gap-3">
                   <div
-                    className="h-10 w-10 rounded-md flex items-center justify-center"
+                    className="h-11 w-11 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: brandColor + "20" }}
                   >
                     <FolderOpen
@@ -367,7 +390,7 @@ export default function RoomBuilder() {
                   </div>
                 </div>
                 <div
-                  className="h-1 rounded-full"
+                  className="h-1.5 rounded-full"
                   style={{ backgroundColor: brandColor }}
                 />
               </Card>
@@ -376,10 +399,10 @@ export default function RoomBuilder() {
         )}
 
         {currentStep === "access" && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between gap-4">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30">
               <div>
-                <Label>Require Email to View</Label>
+                <Label className="text-sm font-medium">Require Email to View</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Prospects must enter their email before accessing the hub.
                 </p>
@@ -401,9 +424,9 @@ export default function RoomBuilder() {
                 data-testid="input-password"
               />
             </div>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30">
               <div>
-                <Label>Allow Downloads</Label>
+                <Label className="text-sm font-medium">Allow Downloads</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Let prospects download files from the hub.
                 </p>
@@ -418,6 +441,7 @@ export default function RoomBuilder() {
         )}
       </Card>
 
+      {/* Navigation */}
       <div className="flex items-center justify-between gap-4">
         <Button
           variant="outline"
@@ -430,7 +454,7 @@ export default function RoomBuilder() {
         </Button>
 
         {currentStepIndex < steps.length - 1 ? (
-          <Button onClick={goNext} data-testid="button-next-step">
+          <Button onClick={goNext} className="shadow-sm" data-testid="button-next-step">
             Next
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
@@ -438,8 +462,10 @@ export default function RoomBuilder() {
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!canSubmit || createMutation.isPending}
+            className="shadow-sm"
             data-testid="button-create-room"
           >
+            <Sparkles className="h-4 w-4 mr-2" />
             {createMutation.isPending ? "Creating..." : "Create Deal Hub"}
           </Button>
         )}
