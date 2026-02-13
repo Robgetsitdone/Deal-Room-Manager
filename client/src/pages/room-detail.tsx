@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ContentCard } from "@/components/deal-room/content-card";
+import { DocumentViewer } from "@/components/deal-room/document-viewer";
+import { AssetNavList } from "@/components/deal-room/asset-nav-list";
 import {
   ArrowLeft,
   Copy,
@@ -22,17 +25,18 @@ import {
   Send,
   Archive,
   Trash2,
-  GripVertical,
   Pencil,
   Check,
   X,
-  ChevronUp,
   ChevronDown,
+  ChevronUp,
   MessageSquare,
   Link as LinkIcon,
   Settings,
   Plus,
   Sparkles,
+  LayoutGrid,
+  Users,
 } from "lucide-react";
 import type {
   DealRoom,
@@ -77,8 +81,9 @@ export default function RoomDetail() {
     allowDownload: true,
   });
   const [newComment, setNewComment] = useState("");
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "viewer">("grid");
+  const [showViewers, setShowViewers] = useState(false);
 
   const { data: room, isLoading } = useQuery<RoomDetailData>({
     queryKey: ["/api/deal-rooms", roomId],
@@ -223,30 +228,7 @@ export default function RoomDetail() {
     ? [...room.assets].sort((a, b) => a.order - b.order)
     : [];
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
-  const handleDrop = (index: number) => {
-    if (draggedIndex === null || draggedIndex === index) {
-      setDraggedIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-
-    const newOrder = [...sortedAssets];
-    const [moved] = newOrder.splice(draggedIndex, 1);
-    newOrder.splice(index, 0, moved);
-
-    reorderMutation.mutate(newOrder.map((a) => a.id));
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
+  const selectedAsset = sortedAssets.find((a) => a.id === selectedAssetId);
 
   const moveAsset = (index: number, direction: "up" | "down") => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
@@ -570,338 +552,365 @@ export default function RoomDetail() {
         ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="assets">
-        <TabsList>
-          <TabsTrigger value="assets" data-testid="tab-assets">
-            Assets ({sortedAssets.length})
-          </TabsTrigger>
-          <TabsTrigger value="comments" data-testid="tab-comments">
-            Comments ({comments?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="viewers" data-testid="tab-viewers">
-            Viewers ({room.views?.length || 0})
-          </TabsTrigger>
-        </TabsList>
+      {/* Content Area: Sidebar + Main */}
+      <div className="flex rounded-xl border bg-card overflow-hidden" style={{ minHeight: 520 }}>
+        {/* Left Sidebar */}
+        <div className="w-56 border-r flex flex-col shrink-0 bg-muted/20">
+          <div className="px-3 py-3 border-b flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Content ({sortedAssets.length})
+            </p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => {
+                setSelectedAssetId(null);
+                setViewMode("grid");
+                setEditingAssetId(null);
+              }}
+              title="Grid view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </Button>
+          </div>
 
-        <TabsContent value="assets" className="mt-4 space-y-4">
-          {sortedAssets.length === 0 ? (
-            <Card className="p-10 text-center border-dashed">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-1">No assets yet</h3>
-              <p className="text-sm text-muted-foreground">
-                Add files from your library to this hub.
-              </p>
-            </Card>
+          {sortedAssets.length > 0 ? (
+            <AssetNavList
+              assets={sortedAssets.map((a) => ({
+                id: a.id,
+                title: a.title,
+                file: { fileType: a.file.fileType },
+              }))}
+              selectedId={selectedAssetId}
+              onSelect={(id) => {
+                setSelectedAssetId(id);
+                setViewMode("viewer");
+                setEditingAssetId(null);
+              }}
+              brandColor={room.brandColor || undefined}
+              editable
+              onEdit={(id) => {
+                const asset = sortedAssets.find((a) => a.id === id);
+                if (asset) startEditingAsset(asset);
+              }}
+              onDelete={(id) => deleteAssetMutation.mutate(id)}
+            />
           ) : (
-            <div className="space-y-2">
-              {sortedAssets.map((asset, index) => (
-                <div
-                  key={asset.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDrop={() => handleDrop(index)}
-                  onDragEnd={() => {
-                    setDraggedIndex(null);
-                    setDragOverIndex(null);
-                  }}
-                  className={`transition-opacity ${draggedIndex === index ? "opacity-40" : ""} ${dragOverIndex === index && draggedIndex !== index ? "border-t-2 border-primary" : ""}`}
-                >
-                  {editingAssetId === asset.id ? (
-                    <Card className="p-5 space-y-3" data-testid={`asset-edit-${asset.id}`}>
-                      <div className="space-y-2">
-                        <Label>Title</Label>
-                        <Input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          data-testid="input-asset-title"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Input
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          placeholder="Optional description"
-                          data-testid="input-asset-description"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Section</Label>
-                        <Input
-                          value={editSection}
-                          onChange={(e) => setEditSection(e.target.value)}
-                          placeholder="Optional section grouping"
-                          data-testid="input-asset-section"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingAssetId(null)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="shadow-sm"
-                          onClick={saveAssetEdit}
-                          disabled={updateAssetMutation.isPending}
-                          data-testid="button-save-asset"
-                        >
-                          <Check className="h-3.5 w-3.5 mr-1" />
-                          Save
-                        </Button>
-                      </div>
-                    </Card>
-                  ) : (
-                    <Card className="p-4 hover:shadow-sm transition-shadow" data-testid={`asset-${asset.id}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="cursor-grab active:cursor-grabbing flex-shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                          <GripVertical className="h-4 w-4" />
-                        </div>
-                        <div
-                          className="h-10 w-10 rounded-lg flex items-center justify-center text-xs font-semibold flex-shrink-0"
-                          style={{
-                            backgroundColor: (room.brandColor || "#2563EB") + "12",
-                            color: room.brandColor || "#2563EB",
-                          }}
-                        >
-                          {asset.file.fileType.toUpperCase().slice(0, 4)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{asset.title}</p>
-                          {asset.description && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {asset.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {asset.section && (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                {asset.section}
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {(asset.file.fileSize / 1024).toFixed(1)} KB
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => moveAsset(index, "up")}
-                            disabled={index === 0}
-                            data-testid={`button-move-up-${asset.id}`}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => moveAsset(index, "down")}
-                            disabled={index === sortedAssets.length - 1}
-                            data-testid={`button-move-down-${asset.id}`}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => startEditingAsset(asset)}
-                            data-testid={`button-edit-asset-${asset.id}`}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => deleteAssetMutation.mutate(asset.id)}
-                            data-testid={`button-delete-asset-${asset.id}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <p className="text-xs text-muted-foreground text-center">
+                No content yet
+              </p>
+            </div>
+          )}
+
+          {/* Add from library */}
+          {availableFiles.length > 0 && (
+            <div className="border-t p-2 mt-auto">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+                Add from Library
+              </p>
+              <ScrollArea className="max-h-36">
+                <div className="space-y-0.5">
+                  {availableFiles.slice(0, 8).map((file) => (
+                    <button
+                      key={file.id}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-muted/50 transition-colors"
+                      onClick={() =>
+                        addAssetMutation.mutate({
+                          fileId: file.id,
+                          title: file.fileName,
+                          order: sortedAssets.length,
+                        })
+                      }
+                      data-testid={`add-file-${file.id}`}
+                    >
+                      <Plus className="h-3 w-3 text-emerald-500 shrink-0" />
+                      <span className="truncate text-xs">{file.fileName}</span>
+                    </button>
+                  ))}
+                  {availableFiles.length > 8 && (
+                    <p className="text-[10px] text-muted-foreground text-center py-1">
+                      +{availableFiles.length - 8} more
+                    </p>
                   )}
                 </div>
-              ))}
+              </ScrollArea>
             </div>
           )}
+        </div>
 
-          {/* Add files from library */}
-          {availableFiles.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <p className="text-sm font-medium text-muted-foreground">Add files from library</p>
-              <div className="grid gap-2">
-                {availableFiles.slice(0, 5).map((file) => (
-                  <Card
-                    key={file.id}
-                    className="p-3.5 cursor-pointer hover:shadow-sm hover:bg-muted/30 transition-all"
-                    onClick={() =>
-                      addAssetMutation.mutate({
-                        fileId: file.id,
-                        title: file.fileName,
-                        order: sortedAssets.length,
-                      })
-                    }
-                    data-testid={`add-file-${file.id}`}
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {editingAssetId ? (
+            /* Asset Edit Form */
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="w-full max-w-md space-y-4" data-testid={`asset-edit-${editingAssetId}`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Edit Asset</h3>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingAssetId(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    data-testid="input-asset-title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Optional description"
+                    data-testid="input-asset-description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Section</Label>
+                  <Input
+                    value={editSection}
+                    onChange={(e) => setEditSection(e.target.value)}
+                    placeholder="Optional section grouping"
+                    data-testid="input-asset-section"
+                  />
+                </div>
+                {/* Reorder controls */}
+                {(() => {
+                  const idx = sortedAssets.findIndex((a) => a.id === editingAssetId);
+                  if (idx === -1) return null;
+                  return (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-xs text-muted-foreground">Order:</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={() => moveAsset(idx, "up")}
+                        disabled={idx === 0}
+                      >
+                        <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                        Up
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={() => moveAsset(idx, "down")}
+                        disabled={idx === sortedAssets.length - 1}
+                      >
+                        <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                        Down
+                      </Button>
+                    </div>
+                  );
+                })()}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingAssetId(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="shadow-sm"
+                    onClick={saveAssetEdit}
+                    disabled={updateAssetMutation.isPending}
+                    data-testid="button-save-asset"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                        <Plus className="h-4 w-4 text-emerald-500" />
-                      </div>
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0">
-                        {file.fileType.toUpperCase().slice(0, 4)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{file.fileName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.fileSize / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-                {availableFiles.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center py-1">
-                    + {availableFiles.length - 5} more files in library
-                  </p>
-                )}
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                    Save
+                  </Button>
+                </div>
               </div>
             </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="comments" className="mt-4 space-y-4">
-          <Card className="p-5 space-y-3">
-            <Textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Leave a note for your prospect..."
-              className="resize-none"
-              rows={3}
-              data-testid="input-seller-comment"
+          ) : viewMode === "viewer" && selectedAsset ? (
+            /* Inline Document Viewer */
+            <DocumentViewer
+              fileUrl={selectedAsset.file.fileUrl}
+              fileType={selectedAsset.file.fileType}
+              fileName={selectedAsset.file.fileName}
+              fileSize={selectedAsset.file.fileSize}
+              title={selectedAsset.title}
+              allowDownload={room.allowDownload}
+              brandColor={room.brandColor || undefined}
+              onBack={() => {
+                setSelectedAssetId(null);
+                setViewMode("grid");
+              }}
             />
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                className="shadow-sm"
-                onClick={() => {
-                  if (newComment.trim()) commentMutation.mutate(newComment.trim());
-                }}
-                disabled={!newComment.trim() || commentMutation.isPending}
-                data-testid="button-post-comment"
-              >
-                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                Post Note
-              </Button>
-            </div>
-          </Card>
-
-          {(!comments || comments.length === 0) ? (
-            <Card className="p-10 text-center border-dashed">
-              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                <MessageSquare className="h-6 w-6 text-muted-foreground" />
+          ) : sortedAssets.length === 0 ? (
+            /* Empty State */
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-1">No assets yet</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Add files from your library using the sidebar to build out this hub.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                No comments yet. Post a note for your prospect or they can leave comments on the share page.
-              </p>
-            </Card>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {comments.map((comment) => (
-                <Card key={comment.id} className="p-4" data-testid={`comment-${comment.id}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold ${comment.authorRole === "seller" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                      {comment.authorName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold">{comment.authorName}</span>
-                        <Badge variant={comment.authorRole === "seller" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
-                          {comment.authorRole === "seller" ? "Team" : "Prospect"}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ""}
-                        </span>
-                      </div>
-                      <p className="text-sm mt-1.5 whitespace-pre-wrap leading-relaxed">{comment.message}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+            /* Content Card Grid */
+            <div className="flex-1 overflow-auto p-6">
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+                {sortedAssets.map((asset) => (
+                  <ContentCard
+                    key={asset.id}
+                    title={asset.title}
+                    fileUrl={asset.file.fileUrl}
+                    fileType={asset.file.fileType}
+                    fileName={asset.file.fileName}
+                    fileSize={asset.file.fileSize}
+                    brandColor={room.brandColor || undefined}
+                    isSelected={asset.id === selectedAssetId}
+                    onClick={() => {
+                      setSelectedAssetId(asset.id);
+                      setViewMode("viewer");
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           )}
-        </TabsContent>
+        </div>
+      </div>
 
-        <TabsContent value="viewers" className="mt-4 space-y-2">
-          {(!room.views || room.views.length === 0) ? (
-            <Card className="p-10 text-center border-dashed">
-              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                <Eye className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                No viewers yet. Share your hub to start tracking.
-              </p>
-            </Card>
-          ) : (
-            room.views.map((view) => (
-              <Card
-                key={view.id}
-                className="p-4"
-                data-testid={`viewer-${view.id}`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Eye className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {view.viewerName || view.viewerEmail || "Anonymous"}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                        {view.viewerCompany && (
-                          <span>{view.viewerCompany}</span>
-                        )}
-                        {view.device && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">
-                            {view.device}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+      {/* Comments Section - always visible */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold">Comments ({comments?.length || 0})</h3>
+        </div>
+
+        <Card className="p-5 space-y-3">
+          <Textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Leave a note for your prospect..."
+            className="resize-none"
+            rows={3}
+            data-testid="input-seller-comment"
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              className="shadow-sm"
+              onClick={() => {
+                if (newComment.trim()) commentMutation.mutate(newComment.trim());
+              }}
+              disabled={!newComment.trim() || commentMutation.isPending}
+              data-testid="button-post-comment"
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+              Post Note
+            </Button>
+          </div>
+        </Card>
+
+        {(!comments || comments.length === 0) ? (
+          <Card className="p-8 text-center border-dashed">
+            <p className="text-sm text-muted-foreground">
+              No comments yet. Post a note for your prospect or they can leave comments on the share page.
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {comments.map((comment) => (
+              <Card key={comment.id} className="p-4" data-testid={`comment-${comment.id}`}>
+                <div className="flex items-start gap-3">
+                  <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold ${comment.authorRole === "seller" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    {comment.authorName.charAt(0).toUpperCase()}
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" />
-                      {view.viewedAt
-                        ? new Date(view.viewedAt).toLocaleString()
-                        : ""}
-                    </p>
-                    {view.duration != null && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {Math.round(view.duration / 60)}m {view.duration % 60}s
-                      </p>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold">{comment.authorName}</span>
+                      <Badge variant={comment.authorRole === "seller" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                        {comment.authorRole === "seller" ? "Team" : "Prospect"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ""}
+                      </span>
+                    </div>
+                    <p className="text-sm mt-1.5 whitespace-pre-wrap leading-relaxed">{comment.message}</p>
                   </div>
                 </div>
               </Card>
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Viewers Section - collapsible */}
+      <div className="space-y-3">
+        <button
+          className="flex items-center gap-2 w-full text-left group"
+          onClick={() => setShowViewers(!showViewers)}
+        >
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold">Viewers ({room.views?.length || 0})</h3>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showViewers ? "rotate-180" : ""}`} />
+        </button>
+
+        {showViewers && (
+          <div className="space-y-2">
+            {(!room.views || room.views.length === 0) ? (
+              <Card className="p-8 text-center border-dashed">
+                <p className="text-sm text-muted-foreground">
+                  No viewers yet. Share your hub to start tracking.
+                </p>
+              </Card>
+            ) : (
+              room.views.map((view) => (
+                <Card
+                  key={view.id}
+                  className="p-4"
+                  data-testid={`viewer-${view.id}`}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Eye className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          {view.viewerName || view.viewerEmail || "Anonymous"}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                          {view.viewerCompany && (
+                            <span>{view.viewerCompany}</span>
+                          )}
+                          {view.device && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">
+                              {view.device}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        {view.viewedAt
+                          ? new Date(view.viewedAt).toLocaleString()
+                          : ""}
+                      </p>
+                      {view.duration != null && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {Math.round(view.duration / 60)}m {view.duration % 60}s
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

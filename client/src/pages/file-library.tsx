@@ -8,14 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
-  FileText,
   Upload,
   Search,
   Trash2,
   Sparkles,
-  FileImage,
-  FileVideo,
-  File as FileIcon,
   LayoutGrid,
   List,
   ArrowUpDown,
@@ -29,33 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const fileTypeIcon = (type: string) => {
-  const t = type.toLowerCase();
-  if (t.includes("image") || t.match(/(jpg|jpeg|png|gif|webp|svg)/)) return FileImage;
-  if (t.includes("video")) return FileVideo;
-  if (t.includes("pdf")) return FileText;
-  return FileIcon;
-};
-
-const fileTypeColor = (type: string) => {
-  const t = type.toLowerCase();
-  if (t.includes("pdf")) return { color: "text-red-500", bg: "bg-red-500/10" };
-  if (t.includes("image") || t.match(/(jpg|jpeg|png|gif|webp|svg)/)) return { color: "text-purple-500", bg: "bg-purple-500/10" };
-  if (t.includes("video")) return { color: "text-blue-500", bg: "bg-blue-500/10" };
-  if (t.match(/(ppt|pptx)/)) return { color: "text-amber-500", bg: "bg-amber-500/10" };
-  if (t.match(/(doc|docx)/)) return { color: "text-blue-600", bg: "bg-blue-600/10" };
-  if (t.match(/(xls|xlsx|csv)/)) return { color: "text-emerald-500", bg: "bg-emerald-500/10" };
-  return { color: "text-muted-foreground", bg: "bg-muted" };
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-};
+import { getFileTypeIcon, getFileTypeColor, formatFileSize } from "@/components/deal-room/file-type-utils";
 
 export default function FileLibrary() {
   const { toast } = useToast();
@@ -327,8 +297,8 @@ export default function FileLibrary() {
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredAndSortedFiles.map((file) => {
-            const Icon = fileTypeIcon(file.fileType);
-            const colors = fileTypeColor(file.fileType);
+            const Icon = getFileTypeIcon(file.fileType);
+            const colors = getFileTypeColor(file.fileType);
             const isImage = file.fileType.toLowerCase().match(/(jpg|jpeg|png|gif|webp|svg)/);
 
             return (
@@ -388,8 +358,8 @@ export default function FileLibrary() {
         <Card className="overflow-hidden">
           <div className="divide-y">
             {filteredAndSortedFiles.map((file) => {
-              const Icon = fileTypeIcon(file.fileType);
-              const colors = fileTypeColor(file.fileType);
+              const Icon = getFileTypeIcon(file.fileType);
+              const colors = getFileTypeColor(file.fileType);
               return (
                 <div key={file.id} className="flex items-center justify-between p-3.5 hover:bg-muted/30 transition-colors group">
                   <div className="flex items-center gap-3 min-w-0">

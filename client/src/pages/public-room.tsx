@@ -7,13 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AssetNavList } from "@/components/deal-room/asset-nav-list";
+import { DocumentViewer } from "@/components/deal-room/document-viewer";
 import {
   FolderOpen,
-  FileText,
-  Download,
   Lock,
-  Eye,
-  ExternalLink,
   MessageSquare,
   Send,
   ChevronRight,
@@ -74,6 +72,7 @@ export default function PublicRoom() {
   const [commentEmail, setCommentEmail] = useState("");
   const [commentMessage, setCommentMessage] = useState("");
   const [showComments, setShowComments] = useState(true);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   const { data: room, isLoading, error } = useQuery<PublicRoomData>({
@@ -143,6 +142,14 @@ export default function PublicRoom() {
     }
   }, [unlocked, token]);
 
+  // Auto-select first asset when unlocked
+  useEffect(() => {
+    if (unlocked && room && room.assets.length > 0 && !selectedAssetId) {
+      const sorted = [...room.assets].sort((a, b) => a.order - b.order);
+      setSelectedAssetId(sorted[0].id);
+    }
+  }, [unlocked, room, selectedAssetId]);
+
   useEffect(() => {
     if (unlocked && viewId) {
       intervalRef.current = setInterval(() => {
@@ -172,11 +179,11 @@ export default function PublicRoom() {
     }
   };
 
-  const handleAssetClick = (asset: PublicRoomData["assets"][0]) => {
+  const handleAssetSelect = (assetId: string) => {
+    setSelectedAssetId(assetId);
     if (viewId) {
-      trackClickMutation.mutate(asset.id);
+      trackClickMutation.mutate(assetId);
     }
-    window.open(asset.file.fileUrl, "_blank");
   };
 
   const handlePostComment = () => {
@@ -331,10 +338,8 @@ export default function PublicRoom() {
     );
   }
 
-  const sections = Array.from(
-    new Set(room.assets.map((a) => a.section).filter(Boolean))
-  ) as string[];
-  const unsectioned = room.assets.filter((a) => !a.section);
+  const sortedAssets = [...room.assets].sort((a, b) => a.order - b.order);
+  const selectedAsset = sortedAssets.find((a) => a.id === selectedAssetId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -344,79 +349,94 @@ export default function PublicRoom() {
       />
 
       <div className="flex min-h-[calc(100vh-0.375rem)]">
-        {/* Main Content */}
-        <div className="flex-1">
-          <div className="max-w-3xl mx-auto px-6 py-10 space-y-8 page-enter">
-            {/* Header */}
-            <div className="flex items-start gap-4">
+        {/* Left Sidebar */}
+        <div className="w-64 border-r bg-card flex flex-col shrink-0">
+          {/* Brand Header */}
+          <div className="p-5 border-b">
+            <div className="flex items-center gap-3">
               <div
-                className="h-13 w-13 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
                 style={{ backgroundColor: brandColor + "15" }}
               >
-                <FolderOpen className="h-6 w-6" style={{ color: brandColor }} />
+                <FolderOpen className="h-5 w-5" style={{ color: brandColor }} />
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              <div className="min-w-0">
+                <h1 className="font-bold text-sm truncate">
                   {room.headline || room.name}
                 </h1>
                 {room.welcomeMessage && (
-                  <p className="text-muted-foreground mt-1.5 leading-relaxed">
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-snug">
                     {room.welcomeMessage}
                   </p>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Sectioned Assets */}
-            {sections.map((section) => (
-              <div key={section} className="space-y-3">
-                <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                  {section}
-                </h2>
-                {room.assets
-                  .filter((a) => a.section === section)
-                  .sort((a, b) => a.order - b.order)
-                  .map((asset) => (
-                    <PublicAssetCard
-                      key={asset.id}
-                      asset={asset}
-                      brandColor={brandColor}
-                      allowDownload={room.allowDownload}
-                      onClick={() => handleAssetClick(asset)}
-                    />
-                  ))}
-              </div>
-            ))}
+          {/* Asset Navigation */}
+          <div className="px-3 py-2.5">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+              Content ({sortedAssets.length})
+            </p>
+          </div>
 
-            {/* Unsectioned Assets */}
-            {unsectioned.length > 0 && (
-              <div className="space-y-3">
-                {sections.length > 0 && (
-                  <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Files
-                  </h2>
-                )}
-                {unsectioned
-                  .sort((a, b) => a.order - b.order)
-                  .map((asset) => (
-                    <PublicAssetCard
-                      key={asset.id}
-                      asset={asset}
-                      brandColor={brandColor}
-                      allowDownload={room.allowDownload}
-                      onClick={() => handleAssetClick(asset)}
-                    />
-                  ))}
-              </div>
-            )}
-
-            {/* Footer */}
-            <div className="pt-8 border-t text-center">
-              <p className="text-xs text-muted-foreground">
-                Powered by <span className="font-semibold">DealBuddy</span>
+          {sortedAssets.length > 0 ? (
+            <AssetNavList
+              assets={sortedAssets.map((a) => ({
+                id: a.id,
+                title: a.title,
+                file: { fileType: a.file.fileType },
+              }))}
+              selectedId={selectedAssetId}
+              onSelect={handleAssetSelect}
+              brandColor={brandColor}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <p className="text-xs text-muted-foreground text-center">
+                No content available
               </p>
             </div>
+          )}
+
+          {/* Powered by footer */}
+          <div className="mt-auto p-4 border-t">
+            <p className="text-[10px] text-muted-foreground text-center">
+              Powered by <span className="font-semibold">DealBuddy</span>
+            </p>
           </div>
+        </div>
+
+        {/* Main Content - Document Viewer */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {selectedAsset ? (
+            <DocumentViewer
+              fileUrl={selectedAsset.file.fileUrl}
+              fileType={selectedAsset.file.fileType}
+              fileName={selectedAsset.file.fileName}
+              fileSize={selectedAsset.file.fileSize}
+              title={selectedAsset.title}
+              allowDownload={room.allowDownload}
+              brandColor={brandColor}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <div
+                  className="h-16 w-16 rounded-xl flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: brandColor + "10" }}
+                >
+                  <FolderOpen className="h-8 w-8" style={{ color: brandColor }} />
+                </div>
+                <h2 className="font-semibold text-lg mb-1">
+                  {room.headline || room.name}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Select a document from the sidebar to get started.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Comments Toggle Button */}
@@ -546,55 +566,5 @@ export default function PublicRoom() {
         </div>
       </div>
     </div>
-  );
-}
-
-function PublicAssetCard({
-  asset,
-  brandColor,
-  allowDownload,
-  onClick,
-}: {
-  asset: PublicRoomData["assets"][0];
-  brandColor: string;
-  allowDownload: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Card
-      className="p-4 cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-[1px] group"
-      onClick={onClick}
-      data-testid={`public-asset-${asset.id}`}
-    >
-      <div className="flex items-center gap-3.5">
-        <div
-          className="h-11 w-11 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold transition-transform group-hover:scale-105"
-          style={{
-            backgroundColor: brandColor + "12",
-            color: brandColor,
-          }}
-        >
-          {asset.file.fileType.toUpperCase().slice(0, 4)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate group-hover:text-foreground transition-colors">{asset.title}</p>
-          {asset.description && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {asset.description}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {asset.file.fileType.toUpperCase()} · {(asset.file.fileSize / 1024).toFixed(1)} KB
-          </p>
-        </div>
-        <div className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
-          {allowDownload ? (
-            <Download className="h-4.5 w-4.5 text-muted-foreground" />
-          ) : (
-            <ExternalLink className="h-4.5 w-4.5 text-muted-foreground" />
-          )}
-        </div>
-      </div>
-    </Card>
   );
 }
