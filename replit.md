@@ -4,15 +4,18 @@
 A platform for sales teams to share evaluation materials with prospects through branded, shareable "deal hubs." Users upload files to a centralized library, organize them into deal hubs with custom branding, share via unique links, and track engagement analytics.
 
 ## Recent Changes
+- 2026-02-13: Added deal hub sharing, editing, and comments features
+  - Comments system: deal_room_comments table with seller/prospect roles, API routes for authenticated and public comment posting
+  - Enhanced room-detail page: share link card (always visible), preview button, inline settings editor, drag-and-drop asset reordering, move up/down buttons, inline asset editing (title/description/section), add files from library, comments tab
+  - Enhanced public share page: right-side sliding comments panel where prospects and sellers can exchange messages, auto-refresh every 15s
+  - Asset reorder API: PUT /api/deal-rooms/:id/assets/reorder with orderedIds array
+- 2026-02-13: Fixed XHR upload: added withCredentials for cookie auth, 120s timeout, proper error messages
 - 2026-02-12: Rebranded website name to "DealBuddy" (friendly brand name); concept of "deal hub" retained for shareable content spaces
-- 2026-02-12: Rebranded from "DealRoom" to "Deal Hub" across entire app
-  - Landing page rewritten: clean messaging about sharing evaluation materials, no pricing/credit card language
-  - All user-facing copy updated to "Deal Hub" terminology
 - 2026-02-12: Initial full-stack implementation
-  - Database schema with 7 tables (organizations, organization_members, files, deal_rooms, deal_room_assets, deal_room_views, asset_clicks)
+  - Database schema with 8 tables (organizations, organization_members, files, deal_rooms, deal_room_assets, deal_room_views, asset_clicks, deal_room_comments)
   - All API routes with org-ownership security checks
   - Complete frontend with landing page, dashboard, hubs, file library, analytics, team, settings
-  - Public share page with email gate, password protection, and view/click tracking
+  - Public share page with email gate, password protection, view/click tracking, and comments
   - Object storage integration for file uploads (secured with auth)
   - Replit Auth for authentication
   - Dark mode support with theme toggle

@@ -6,6 +6,7 @@ import {
   dealRoomAssets,
   dealRoomViews,
   assetClicks,
+  dealRoomComments,
   type InsertOrganization,
   type Organization,
   type InsertOrganizationMember,
@@ -19,6 +20,8 @@ import {
   type DealRoomView,
   type InsertAssetClick,
   type AssetClick,
+  type InsertDealRoomComment,
+  type DealRoomComment,
 } from "@shared/schema";
 import type { File as FileRecord } from "@shared/schema";
 import { db } from "./db";
@@ -57,6 +60,9 @@ export interface IStorage {
   updateViewDuration(viewId: string, duration: number): Promise<void>;
 
   createAssetClick(click: InsertAssetClick): Promise<AssetClick>;
+
+  createComment(comment: InsertDealRoomComment): Promise<DealRoomComment>;
+  getComments(dealRoomId: string): Promise<DealRoomComment[]>;
 
   getAnalyticsOverview(orgId: string): Promise<{
     totalRooms: number;
@@ -205,6 +211,15 @@ export class DatabaseStorage implements IStorage {
   async createAssetClick(click: InsertAssetClick): Promise<AssetClick> {
     const [result] = await db.insert(assetClicks).values(click).returning();
     return result;
+  }
+
+  async createComment(comment: InsertDealRoomComment): Promise<DealRoomComment> {
+    const [result] = await db.insert(dealRoomComments).values(comment).returning();
+    return result;
+  }
+
+  async getComments(dealRoomId: string): Promise<DealRoomComment[]> {
+    return db.select().from(dealRoomComments).where(eq(dealRoomComments.dealRoomId, dealRoomId)).orderBy(dealRoomComments.createdAt);
   }
 
   async getAnalyticsOverview(orgId: string): Promise<{

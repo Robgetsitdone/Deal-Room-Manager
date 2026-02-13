@@ -185,6 +185,7 @@ export const dealRoomsRelations = relations(dealRooms, ({ one, many }) => ({
   }),
   assets: many(dealRoomAssets),
   views: many(dealRoomViews),
+  comments: many(dealRoomComments),
 }));
 
 export const dealRoomAssetsRelations = relations(
@@ -213,6 +214,23 @@ export const dealRoomViewsRelations = relations(
   })
 );
 
+export const commentRoleEnum = pgEnum("comment_role", ["seller", "prospect"]);
+
+export const dealRoomComments = pgTable("deal_room_comments", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  dealRoomId: varchar("deal_room_id")
+    .notNull()
+    .references(() => dealRooms.id, { onDelete: "cascade" }),
+  authorName: text("author_name").notNull(),
+  authorEmail: text("author_email"),
+  authorRole: commentRoleEnum("author_role").notNull(),
+  authorUserId: varchar("author_user_id"),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const assetClicksRelations = relations(assetClicks, ({ one }) => ({
   asset: one(dealRoomAssets, {
     fields: [assetClicks.assetId],
@@ -221,6 +239,13 @@ export const assetClicksRelations = relations(assetClicks, ({ one }) => ({
   view: one(dealRoomViews, {
     fields: [assetClicks.viewId],
     references: [dealRoomViews.id],
+  }),
+}));
+
+export const dealRoomCommentsRelations = relations(dealRoomComments, ({ one }) => ({
+  dealRoom: one(dealRooms, {
+    fields: [dealRoomComments.dealRoomId],
+    references: [dealRooms.id],
   }),
 }));
 
@@ -252,6 +277,10 @@ export const insertAssetClickSchema = createInsertSchema(assetClicks).omit({
   id: true,
   clickedAt: true,
 });
+export const insertDealRoomCommentSchema = createInsertSchema(dealRoomComments).omit({
+  id: true,
+  createdAt: true,
+});
 
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
@@ -269,3 +298,5 @@ export type InsertDealRoomView = z.infer<typeof insertDealRoomViewSchema>;
 export type DealRoomView = typeof dealRoomViews.$inferSelect;
 export type InsertAssetClick = z.infer<typeof insertAssetClickSchema>;
 export type AssetClick = typeof assetClicks.$inferSelect;
+export type InsertDealRoomComment = z.infer<typeof insertDealRoomCommentSchema>;
+export type DealRoomComment = typeof dealRoomComments.$inferSelect;

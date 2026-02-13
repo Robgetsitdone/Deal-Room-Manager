@@ -176,6 +176,38 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/deal-rooms/:id/assets/reorder", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const orgId = await getOrCreateOrgForUser(userId);
+      const room = await storage.getDealRoom(req.params.id);
+      if (!room || room.organizationId !== orgId) {
+        return res.status(404).json({ message: "Not found" });
+      }
+
+      const { orderedIds } = req.body;
+      if (!Array.isArray(orderedIds)) {
+        return res.status(400).json({ message: "orderedIds array required" });
+      }
+
+      const existingAssets = await storage.getDealRoomAssets(room.id);
+      const existingIds = new Set(existingAssets.map((a) => a.id));
+      const validIds = orderedIds.every((id: string) => existingIds.has(id));
+      if (!validIds || orderedIds.length !== existingIds.size) {
+        return res.status(400).json({ message: "orderedIds must match the room's asset IDs" });
+      }
+
+      for (let i = 0; i < orderedIds.length; i++) {
+        await storage.updateDealRoomAsset(orderedIds[i], { order: i });
+      }
+
+      const assets = await storage.getDealRoomAssets(room.id);
+      res.json(assets);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.put("/api/deal-rooms/:id/assets/:assetId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -420,6 +452,94 @@ export async function registerRoutes(
       });
 
       res.json(click);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/deal-rooms/:id/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const orgId = await getOrCreateOrgForUser(userId);
+      const room = await storage.getDealRoom(req.params.id);
+      if (!room || room.organizationId !== orgId) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      const comments = await storage.getComments(room.id);
+      res.json(comments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/deal-rooms/:id/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const orgId = await getOrCreateOrgForUser(userId);
+      const room = await storage.getDealRoom(req.params.id);
+      if (!room || room.organizationId !== orgId) {
+        return res.status(404).json({ message: "Not found" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const authorName = user
+        ? [user.firstName, user.lastName].filter(Boolean).join(" ") || "Team Member"
+        : "Team Member";
+
+      const message = typeof req.body.message === "string" ? req.body.message.trim().slice(0, 5000) : "";
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const comment = await storage.createComment({
+        dealRoomId: room.id,
+        authorName,
+        authorEmail: user?.email || null,
+        authorRole: "seller",
+        authorUserId: userId,
+        message,
+      });
+      res.json(comment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/share/:token/comments", async (req, res) => {
+    try {
+      const room = await storage.getDealRoomByToken(req.params.token);
+      if (!room) return res.status(404).json({ message: "Room not found" });
+      if (room.status !== "published") return res.status(404).json({ message: "Room not available" });
+      const comments = await storage.getComments(room.id);
+      res.json(comments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/share/:token/comments", async (req, res) => {
+    try {
+      const room = await storage.getDealRoomByToken(req.params.token);
+      if (!room) return res.status(404).json({ message: "Room not found" });
+      if (room.status !== "published") return res.status(404).json({ message: "Room not available" });
+
+      const authorName = typeof req.body.authorName === "string" ? req.body.authorName.trim().slice(0, 200) : "";
+      const authorEmail = typeof req.body.authorEmail === "string" ? req.body.authorEmail.trim().slice(0, 200) : null;
+      const message = typeof req.body.message === "string" ? req.body.message.trim().slice(0, 5000) : "";
+
+      if (!authorName || !message) {
+        return res.status(400).json({ message: "Name and message are required" });
+      }
+
+      const comment = await storage.createComment({
+        dealRoomId: room.id,
+        authorName,
+        authorEmail: authorEmail || null,
+        authorRole: "prospect",
+        authorUserId: null,
+        message,
+      });
+      res.json(comment);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
